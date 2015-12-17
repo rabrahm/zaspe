@@ -2,6 +2,8 @@ import new2
 import numpy as np
 import pyfits
 import time
+import os
+
 f = open('zaspe.pars','r')
 lines = f.readlines()
 
@@ -63,11 +65,12 @@ except:
 	sc[3] = flux
 	hdu = pyfits.PrimaryHDU(sc)
 	rtemp = 'temp_zaspe_spectra.fits'
+	if os.access(rtemp,os.F_OK):
+		os.system('rm '+rtemp)
 	hdu.writeto(rtemp)
 	ttemp = spec
 	spec = rtemp
 	
-print isfits
 if 'P' in mod:
 	'Performing the search of the optimal parameters ...'
 	pars = new2.get_rough_pars(spec,RV0=RV0,guess_vsini=guess_vsini,RESI=RESI,ncores=ncores,\

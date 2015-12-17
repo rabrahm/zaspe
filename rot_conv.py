@@ -36,7 +36,7 @@ def conv2(lam,flu,ac,bc,rot):
 
 	return Fnu
 
-def get_ldcoef(TEFF, LOG_G, FEH, MT, path = '/data/echelle/ecpipe/new_class/qua_coe_sloan2.dat'):
+def get_ldcoef(TEFF, LOG_G, FEH, MT, path = 'qua_coe_sloan2.dat'):
 	
 	f = open(path,'r')
 	lines = f.readlines()
@@ -143,7 +143,7 @@ def get_ldcoef(TEFF, LOG_G, FEH, MT, path = '/data/echelle/ecpipe/new_class/qua_
 
 	return ac,bc
 
-def get_ldcoef2(TEFF, LOG_G, FEH, MT, path = '/data/echelle/ecpipe/new_class/qua_coe_sloan2.dat'):
+def get_ldcoef2(TEFF, LOG_G, FEH, MT, path = 'qua_coe_sloan2.dat'):
 	d = np.loadtxt(path)
 	ldn = d[:,1].astype('int')
 

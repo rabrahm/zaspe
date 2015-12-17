@@ -120,6 +120,38 @@ def get_vmac(T):
 		vmac = 1.5
 	return vmac
 
+def get_ccf(wavs,fluxs,vels,ml_v,mh_v,weight):
+	ccf = []
+	for v in vels:
+		ml = ml_v*(1+v/lux)
+		mh = mh_v*(1+v/lux)
+		for i in range(wavs.shape[0]):
+			I = np.where((ml > wavs[i,10])&(mh<wavs[i,-10]))[0]
+			mli = ml[I]
+			mhi = mh[I]
+			wts = weight[I]
+			ejx = np.arange(len(wavs[i])) + 0.5
+			tck = interpolate.splrep(wavs[i],ejx,k=3)
+			pl  = interpolate.splev(mli,tck)
+			ph  = interpolate.splev(mhi,tck)
+			l1 = pl.astype('int')+1
+			h1 = ph.astype('int')
+			fl1 = l1 - pl
+			fh1 = ph - h1
+			msk = np.zeros(len(wavs[i]))
+			for zi in range(len(pl)):
+				msk[int(pl[zi])] = fl1[zi]*wts[zi]
+				msk[l1[zi]:h1[zi]] = wts[zi]
+				msk[h1[zi]] = fh1[zi]*wts[zi]
+			if i == 0:
+				tmask = msk
+			else:
+				tmask = np.vstack((tmask,msk))
+		tmask = tmask/np.sum(tmask)
+		nflxs = fluxs/np.sum(fluxs)
+		ccf.append(np.sum(tmask*nflxs))
+	return np.array(ccf)
+
 def get_oriname(t,g,z):
 	st = str(int(t))
 	#print t,st
@@ -633,6 +665,13 @@ def get_vsini(pars,dplot=False):
 
 	return rout,NRV
 
+def ccf_gau(params,vels):
+	gau = params[0] - params[1]*np.exp(-(vels-params[2])**2/(2*params[3]**2))
+	return gau
+
+def res_ccf_gau(params,ccf,vels):
+	return ccf - ccf_gau(params,vels)
+
 def get_rough_pars(spec,RV0=0,guess_vsini=5.,RESI=120000.,ncores=6,mask=[],trunc=0,errors=False,use_masks=False,very_rough=False,printing=False,fixG=-1,elim=0.1,zmin=500,nit=15):
 
 	global namespec
@@ -696,13 +735,52 @@ def get_rough_pars(spec,RV0=0,guess_vsini=5.,RESI=120000.,ncores=6,mask=[],trunc
 			if len(I) == 0:
 				cond = False
 
-
+	"""
 	if 'RV' in hd.keys():
 		sc[0] *= (1. - float(hd['RV'])/lux)
 		RVTOT = float(hd['RV'])
 	else:
 		sc[0] *= (1. - RV0/lux)
 		RVTOT = RV0
+	"""
+	# First we guess RV and vsin(i) via CCF against a binary mask of G2V sptype
+	# Read in mask
+	rat_res = .5*120000./float(RES_POW)
+	ml, mh, weight = np.loadtxt('G2.mas',unpack=True)
+	ml_v = ToVacuum( ml )
+	mh_v = ToVacuum( mh )
+	# make mask larger accounting for factor ~2 lower res in CORALIE w/r to HARPS
+	av_m = 0.5*( ml_v + mh_v )
+	ml_v -= (av_m - ml_v)*rat_res
+	mh_v += (mh_v - av_m)*rat_res
+	vels = np.arange(-200,200,1.)
+	ccf_m = get_ccf(sc[0],sc[3],vels,ml_v,mh_v,weight)
+	Im = np.argmin(ccf_m)
+	minvel = vels[Im]
+	guess = [ccf_m.max(),ccf_m.max()-ccf_m.min(),minvel,5.]
+	gauss_fit = optimize.leastsq(res_ccf_gau,guess,args=(ccf_m,vels))[0]
+
+	vels = np.arange(gauss_fit[2]-5*gauss_fit[3],gauss_fit[2]+5*gauss_fit[3],0.1)
+	ccf_m = get_ccf(sc[0],sc[3],vels,ml_v,mh_v,weight)
+	Im = np.argmin(ccf_m)
+	minvel = vels[Im]
+	guess = [ccf_m.max(),ccf_m.max()-ccf_m.min(),minvel,5.]
+	gauss_fit = optimize.leastsq(res_ccf_gau,guess,args=(ccf_m,vels))[0]
+
+	RV0 = gauss_fit[2]
+	RVTOT = RV0
+	sc[0] *= (1. - RV0/lux)
+	sigma = np.sqrt(gauss_fit[3]**2 - ((lux/float(RES_POW))/2.355)**2 -1. - 3.**2)
+	if np.isnan(sigma):
+		guess_vsini = 2.
+	else:
+		guess_vsini = sigma/0.66
+
+	if printing:
+		print 'guessed RV:', RV0, 'km/s'
+		print 'guessed vsin(i):', guess_vsini, 'km/s'
+	#guess_vsini = 2.0
+	curr = guess_vsini
 
 	# determine which echelle orders are going to be used
 	ords = []
@@ -719,6 +797,7 @@ def get_rough_pars(spec,RV0=0,guess_vsini=5.,RESI=120000.,ncores=6,mask=[],trunc
 	#get_chis_comp([5750,3.50,-0.5,10.],plt=True)
 	#show()
 	#print gfd
+	"""
 	if guess_vsini == -1:
 		rots = np.arange(0.5,50.6,10.)
 		curr,NRV = get_vsini([5700,4.0,0.0,sc[0],sc[3],rots])
@@ -726,7 +805,7 @@ def get_rough_pars(spec,RV0=0,guess_vsini=5.,RESI=120000.,ncores=6,mask=[],trunc
 			curr = 0.5
 	else:
 		curr = guess_vsini
-	print curr
+	"""
 	all_currs,all_curts,all_curgs,all_curzs = np.array([]),np.array([]),np.array([]),np.array([])
 	#curr = guess_vsini
 	ik = 0

@@ -13,8 +13,8 @@ ZASPE accepts two formats of input spectra. The first one corresponds to the sta
 The file zaspe.pars contains all the variables that ZASPE will use. The supported entries are:
 
     library:     refers to the library of synthetic spectra that will be used:
-                 P: Husser et al. (2005),
-                 C: Coelho et al. (2013),
+                 P: Husser et al. (2013),
+                 C: Coelho et al. (2005),
                  R: Brahm et al. (2015).
     
     wi:          initial wavelength value to be considered in the fit.

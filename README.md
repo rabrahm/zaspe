@@ -36,7 +36,16 @@ modP: path to the Husser et al. (2013) models.
 modC: path to the Coelho et al. (2005) models.
 modR: path to the Brahm et al. (2015) models.
 
+In order to run ZASPE, you have to be in the directory containing the ZASPE codes and you have to type: python run_zaspe.py.
 
+# Dependencies
+Python, numpy, scipy, pyfits
+
+# Installation
+
+Just do
+
+python install.py
 
 
 

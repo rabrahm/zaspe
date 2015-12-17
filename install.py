@@ -56,7 +56,7 @@ p = subprocess.Popen('python setup.py build',stdout = subprocess.PIPE, stderr = 
 p.wait()
 if(p.returncode != 0 and p.returncode != None):
 	print "     ----------------------------------------------------------"
-	print "     > ERROR: "+p_name+" couldn't be installed."
+	print "     > ERROR: integration.c couldn't be installed."
 	print "     > The error was:\n"
 	out, err = p.communicate()
 	print spaced(err,"\t \t")
@@ -73,7 +73,7 @@ p = subprocess.Popen('python setup2.py build',stdout = subprocess.PIPE, stderr =
 p.wait()
 if(p.returncode != 0 and p.returncode != None):
 	print "     ----------------------------------------------------------"
-	print "     > ERROR: "+p_name+" couldn't be installed."
+	print "     > ERROR: Cfunctions.c couldn't be installed."
 	print "     > The error was:\n"
 	out, err = p.communicate()
 	print spaced(err,"\t \t")

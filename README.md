@@ -13,27 +13,49 @@ ZASPE accepts two formats of input spectra. The first one corresponds to the sta
 The file zaspe.pars contains all the variables that ZASPE will use. The supported entries are:
 
 library: refers to the library of synthetic spectra that will be used: P: Husser et al. (2005), C: Coelho et al. (2013), R: Brahm et al. (2015).
+
 wi: initial wavelength value to be considered in the fit.
+
 wf: final wavelength value to be considered in the fit.
+
 mod: ZASPE mode. P: compute only the optimal parameters. E: compute only the errors. PE: compute both, parameters and errors.
+
 spec: file containing the obsreved spectrum.
+
 RV0: approximate radial velocity of the observed spectrum w/r to the synthetic grid.
+
 vsini: initial guess of vsin(i).
+
 RESI: Instrumental Resolution of the spectrograph.
+
 ncores: number of cores required for the paralelization of the algorithm.
+
 trunc: number of pixels in the edges that will be neglected.
+
 nit: maximum number of ZASPE iterations to obtain the best fit.
+
 nsim: total number of Monte Carlo simulations required for computing the errors and the covariance structure (order 100 is enough).
+
 fixG: if you want to fix log(g) to a certain value, you have to type that value here.
-efixG: associated error of the log(g) value.
+
+efixG: associated error of the fixed log(g) value.
+
 T: if mod=E, you have to enter here the Teff value of the best fit.
+
 G: if mod=E, you have to enter here the log(g) value of the best fit.
+
 Z: if mod=E, you have to enter here the [Fe/H] value of the best fit.
+
 R: if mod=E, you have to enter here the vsin(i) value of the best fit.
+
 V: if mod=E, you have to enter here the RV value of the best fit.
+
 wavP: path to the file containing the wavelength values of the Husser et al. (2013) models.
+
 modP: path to the Husser et al. (2013) models.
+
 modC: path to the Coelho et al. (2005) models.
+
 modR: path to the Brahm et al. (2015) models.
 
 In order to run ZASPE, you have to be in the directory containing the ZASPE codes and you have to type: python run_zaspe.py.

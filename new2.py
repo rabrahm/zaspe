@@ -121,35 +121,44 @@ def get_vmac(T):
 	return vmac
 
 def get_ccf(wavs,fluxs,vels,ml_v,mh_v,weight):
+	#for i in range(len(fluxs)):
+	#	nflx = scipy.signal.medfilt(fluxs[i],11)
+	#	fluxs[i] /= np.max(nflx)
 	ccf = []
 	for v in vels:
 		ml = ml_v*(1+v/lux)
 		mh = mh_v*(1+v/lux)
 		for i in range(wavs.shape[0]):
 			I = np.where((ml > wavs[i,10])&(mh<wavs[i,-10]))[0]
-			mli = ml[I]
-			mhi = mh[I]
-			wts = weight[I]
-			ejx = np.arange(len(wavs[i])) + 0.5
-			tck = interpolate.splrep(wavs[i],ejx,k=3)
-			pl  = interpolate.splev(mli,tck)
-			ph  = interpolate.splev(mhi,tck)
-			l1 = pl.astype('int')+1
-			h1 = ph.astype('int')
-			fl1 = l1 - pl
-			fh1 = ph - h1
-			msk = np.zeros(len(wavs[i]))
-			for zi in range(len(pl)):
-				msk[int(pl[zi])] = fl1[zi]*wts[zi]
-				msk[l1[zi]:h1[zi]] = wts[zi]
-				msk[h1[zi]] = fh1[zi]*wts[zi]
-			if i == 0:
-				tmask = msk
+			if len(I) > 5:
+				mli = ml[I]
+				mhi = mh[I]
+				wts = weight[I]
+				ejx = np.arange(len(wavs[i])) + 0.5
+				tck = interpolate.splrep(wavs[i],ejx,k=3)
+				pl  = interpolate.splev(mli,tck)
+				ph  = interpolate.splev(mhi,tck)
+				l1 = pl.astype('int')+1
+				h1 = ph.astype('int')
+				fl1 = l1 - pl
+				fh1 = ph - h1
+				msk = np.zeros(len(wavs[i]))
+				for zi in range(len(pl)):
+					msk[int(pl[zi])] = fl1[zi]*wts[zi]
+					msk[l1[zi]:h1[zi]] = wts[zi]
+					msk[h1[zi]] = fh1[zi]*wts[zi]
+				if i == 0:
+					tmask = msk
+				else:
+					tmask = np.vstack((tmask,msk))
 			else:
+				msk = np.zeros(len(wavs[i]))
 				tmask = np.vstack((tmask,msk))
 		tmask = tmask/np.sum(tmask)
 		nflxs = fluxs/np.sum(fluxs)
 		ccf.append(np.sum(tmask*nflxs))
+	#plot(vels,ccf)
+	#show()
 	return np.array(ccf)
 
 def get_oriname(t,g,z):
@@ -777,8 +786,8 @@ def get_rough_pars(spec,RV0=0,guess_vsini=5.,RESI=120000.,ncores=6,mask=[],trunc
 		guess_vsini = sigma/0.66
 
 	if printing:
-		print 'guessed RV:', RV0, 'km/s'
-		print 'guessed vsin(i):', guess_vsini, 'km/s'
+		print '\t\tguessed RV:', np.around(RV0,3), 'km/s'
+		print '\t\tguessed vsin(i):', np.around(guess_vsini,2), 'km/s'
 	#guess_vsini = 2.0
 	curr = guess_vsini
 
@@ -947,7 +956,7 @@ def get_rough_pars(spec,RV0=0,guess_vsini=5.,RESI=120000.,ncores=6,mask=[],trunc
 		curr = np.around(curr,2)
 		RVTOT = np.around(RVTOT,3)
 		if printing:
-			print 'Iteration', ik, ':', curt,curg,curz,curr,RVTOT,final_chis.min()
+			print '\t\tIteration', ik, ':', curt,curg,curz,curr,RVTOT,final_chis.min()
 		#print fds
 		#KK = np.where(np.absolute(all_currs-curr)<0.05)[0]
 		dift,difg,difz,difr = np.absolute(all_curts - curt), np.absolute(all_curgs - curg), np.absolute(all_curzs - curz), np.absolute(all_currs - curr)
@@ -1000,16 +1009,17 @@ def get_rough_pars(spec,RV0=0,guess_vsini=5.,RESI=120000.,ncores=6,mask=[],trunc
 	#print curt,curg,curz
 	if use_masks:
 		if errors:
-			print curt,curg,curz,curr,RVTOT
+			print '\t\t',curt,curg,curz,curr,RVTOT
 		else:
-			print curt,curg,curz,curr,RVTOT,len(ZO),len(BZO)
+			print '\t\t',curt,curg,curz,curr,RVTOT,len(ZO),len(BZO)
 	else:
-		print curt,curg,curz,curr,RVTOT
+		print '\t\t',curt,curg,curz,curr,RVTOT
 
 	return np.array([curt,curg,curz,curr,RVTOT])
 
 def get_zones(pars):
 	lim = 0.05
+	lim_c = np.array([ -5e-05,   3.5e-01])
 	thrT,thrG,thrZ = 200,0.3,0.2
 	rot2 = max(3.0,pars[3])
 	R2 = pars[4]
@@ -1075,7 +1085,14 @@ def get_zones(pars):
 	#show()
 	#print gfd
 	diff = difT+difZ+difG
+
+	lim = np.polyval(lim_c,mw)
+	II = np.where(lim<0.05)[0]
+	lim[II] = 0.05
+	II = np.where(lim>0.1)[0]
+	lim[II] = 0.1
 	I = np.where(diff>lim)[0]
+
 	I2 = np.hstack((I[-1],I[:-1]))
 	J = np.where(I-1 != I2)[0]
 	JI = I[J]
@@ -1558,7 +1575,7 @@ def get_precise_parameters(spec,rough_parameters,RESI=120000.,ncores=14,trunc=0,
 	zi,zf = get_zones([rt,rg,rz,rr,RESI])
 	ZO,ZI,ZF = get_zetas(zi,zf)
 	ZO,ZI,ZF,BZO,BZI,BZF = the_good_zones(ZO,ZI,ZF,rough_parameters,th=5.0,zmin=zmin,limit=elim)
-	print len(ZO)
+	#print len(ZO)
 	mask = np.zeros((sc.shape[1],sc.shape[2]))
 	mask_bin = np.ones((sc.shape[1],sc.shape[2]))
 	for i in range(len(ZI)):
@@ -1580,9 +1597,9 @@ def get_precise_parameters(spec,rough_parameters,RESI=120000.,ncores=14,trunc=0,
 
 	#rpars = get_rough_pars(spec,RV0=0.,guess_vsini=rr,RESI=RESI,ncores=ncores,mask=mask,trunc=trunc,errors=False,use_masks=True)
 	rpars = rough_parameters
-	print len(ZO)
+	#print len(ZO)
 	ZO,ZI,ZF = get_final_zetas(ZO,ZI,ZF)
-	print len(ZO)
+	#print len(ZO)
 	factors  = get_factors(ZO,ZI,ZF,rpars)
 	#print hist(factors,20)
 	#show()
@@ -1592,7 +1609,7 @@ def get_precise_parameters(spec,rough_parameters,RESI=120000.,ncores=14,trunc=0,
 	#drats = {'rats':rats}
 	#pickle.dump(drats,open('test_mask.pkl','w'))
 	#print gfcdx
-	print 'Starting Simulation ...'
+	#print 'Starting Simulation ...'
 	TPARS = []
 	count = 0
 	watch = []
@@ -1637,7 +1654,7 @@ def get_precise_parameters(spec,rough_parameters,RESI=120000.,ncores=14,trunc=0,
 				if fixG != -1:
 					fixG2 = min(np.random.normal(loc=fixG,scale=efixG),5.0)
 				else:
-					print 'Problem with fixG'
+					print '\t\tProblem with fixG'
 			else:
 				fixG2 = fixG
 			tpars = get_rough_pars(spec,RV0=0.,guess_vsini=rpars[3],RESI=RESI,ncores=ncores,mask=nmask,trunc=trunc,errors=True,use_masks=True,fixG=fixG2)
@@ -1688,5 +1705,4 @@ def get_precise_parameters(spec,rough_parameters,RESI=120000.,ncores=14,trunc=0,
 	hdu.writeto(rout)
 	"""
 	return TPARS
-
 

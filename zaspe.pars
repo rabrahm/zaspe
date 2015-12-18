@@ -17,7 +17,7 @@ G	-1
 Z	-1
 R	-1
 V	-1
-wavP	/nfs/hatsouth/ar0/S/PROJ/rbrahm/models/PHOENIX_MODELS/WAVE_PHOENIX-ACES-AGSS-COND-2011.fits
-modP	/nfs/hatsouth/ar0/S/PROJ/rbrahm/models/PHOENIX_MODELS/
-modC	/data/echelle/COELHO_MODELS/original/
-modR	/data/echelle/kurucz_mod_turb_NA/
+wavP	/path/to/WAVE_PHOENIX-ACES-AGSS-COND-2011.fits
+modP	/path/to/PHOENIX_MODELS/
+modC	/path/to/COELHO05_MODELS/
+modR	/path/to/BRAHM16_MODELS/

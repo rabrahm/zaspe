@@ -44,6 +44,10 @@ for line in lines:
 			R = float(cos[1])
 		elif cos[0] == 'V':
 			V = float(cos[1])
+		elif cos[0] == 'wi':
+			wi = float(cos[1])
+		elif cos[0] == 'wf':
+			wf = float(cos[1])
 isfits = True
 try:
 	sc = pyfits.getdata(spec)

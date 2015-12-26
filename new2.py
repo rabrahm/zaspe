@@ -152,10 +152,10 @@ def get_ccf(wavs,fluxs,vels,ml_v,mh_v,weight):
 				else:
 					tmask = np.vstack((tmask,msk))
 			else:
+				msk = np.zeros(len(wavs[i]))
 				if i == 0:
 					tmask = msk
 				else:
-					msk = np.zeros(len(wavs[i]))
 					tmask = np.vstack((tmask,msk))
 		tmask = tmask/np.sum(tmask)
 		nflxs = fluxs/np.sum(fluxs)

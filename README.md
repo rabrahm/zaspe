@@ -28,10 +28,6 @@ The file zaspe.pars contains all the variables that ZASPE will use. The supporte
   
     spec:        file containing the obsreved spectrum.
   
-    RV0:         approximate radial velocity of the observed spectrum w/r to the synthetic grid.
-  
-    vsini:       initial guess of vsin(i).
-  
     RESI:        Instrumental Resolution of the spectrograph.
   
     ncores:      number of cores required for the paralelization of the algorithm.

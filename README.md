@@ -58,7 +58,7 @@ The file zaspe.pars contains all the variables that ZASPE will use. The supporte
   
     modC:        path to the Coelho et al. (2005) models.
   
-    modR:        path to the Brahm et al. (2015) models.
+    modR:        path to the Brahm et al. (2016) models.
 
 In order to run ZASPE, you have to be in the directory containing the ZASPE codes and you have to type:
 

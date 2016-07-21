@@ -1,4 +1,5 @@
 import new2
+import new3
 import numpy as np
 import pyfits
 import time
@@ -6,6 +7,8 @@ import os
 
 f = open('zaspe.pars','r')
 lines = f.readlines()
+
+outdir = '/home/rbrahm/zaspe_results/'
 
 for line in lines:
 	cos = line.split()
@@ -16,10 +19,6 @@ for line in lines:
 			library = cos[1]
 		elif cos[0] == 'spec':
 			spec = cos[1]
-		elif cos[0] == 'RV0':
-			RV0 = float(cos[1])
-		elif cos[0] == 'vsini':
-			guess_vsini = float(cos[1])
 		elif cos[0] == 'RESI':
 			RESI = float(cos[1])
 		elif cos[0] == 'ncores':
@@ -48,6 +47,8 @@ for line in lines:
 			wi = float(cos[1])
 		elif cos[0] == 'wf':
 			wf = float(cos[1])
+		elif cos[0] == 'outdir':
+			outdir = cos[1]
 isfits = True
 try:
 	sc = pyfits.getdata(spec)
@@ -91,10 +92,23 @@ print '\twill use the', mod_n, 'library of synthetic spectra.\n'
 
 if 'P' in mod:
 	print '\tPerforming the search of the optimal parameters ...'
-	pars = new2.get_rough_pars(spec,RV0=RV0,guess_vsini=guess_vsini,RESI=RESI,ncores=ncores,\
-                              trunc=trunc,printing=True,use_masks=True,fixG=fixG,nit=nit)
+	pars = new3.get_rough_pars(spec,RESI=RESI,ncores=ncores,\
+                              trunc=trunc,printing=True,use_masks=True,fixG=fixG,nit=nit,elim=0.1)
 	print '\tZAPE parameters:'
 	print '\tTeff=', pars[0], 'log(g)=', pars[1], '[Fe/H]=',pars[2], 'vsin(i)=', pars[3], 'RV=', pars[4]
+	if not 'E' in mod:
+		date = str(time.localtime()).split('=')
+		odat = '_'+date[1].split(',')[0]+'_'+date[2].split(',')[0]+'_'+date[3].split(',')[0]+\
+			'_'+date[4].split(',')[0]+'_'+date[4].split(',')[0]+'_'+date[6].split(',')[0] + '_' 
+		rout = ttemp.split('/')[-1][:-5] + odat + 'zaspe_out.txt'
+		f=open(outdir+rout,'w')
+		line = ttemp+'\n'
+		f.write(line)
+		line = str(int(np.around(pars[0]))) + '\t' + str(np.around(pars[1],2)) + '\t' + str(np.around(pars[2],2)) + \
+			'\t' + str(np.around(pars[3],2)) +'\t' + str(np.around(pars[4],2))
+		f.write(line)
+		f.close()
+		
 	
 else:
 	if T!=-1 and G!=-1 and Z!=-1 and R!=-1 and V!=-1:

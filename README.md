@@ -22,7 +22,7 @@ The file zaspe.pars contains all the variables that ZASPE will use. The supporte
     wf:          final wavelength value to be considered in the fit.
   
     mod:         ZASPE mode.
-                 P: compute only the optimal parameters:
+                 P: compute only the optimal parameters.
                  E: compute only the errors.
                  PE: compute both, parameters and errors.
   

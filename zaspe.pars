@@ -3,8 +3,6 @@ wi	5000
 wf	6000
 mod	P
 spec	sun_spec.txt
-RV0	0.
-vsini	2.
 RESI	48000.
 ncores	16
 trunc	200

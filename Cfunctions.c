@@ -531,6 +531,8 @@ return MyResult;
 
 }
 
+// the following only works in Python 2
+
 static PyMethodDef CfunctionsMethods[] = {
 {"Conv", Cfunctions_Conv, METH_VARARGS, "¿que hace esto?"},{"res", Cfunctions_res, METH_VARARGS, "¿que hace esto?"},{"macro", Cfunctions_macro, METH_VARARGS, "¿que hace esto?"},{"macrot", Cfunctions_macrot, METH_VARARGS, "¿que hace esto?"},
 {NULL, NULL, 0, NULL}
@@ -539,3 +541,20 @@ static PyMethodDef CfunctionsMethods[] = {
 void initCfunctions(void){
 (void) Py_InitModule("Cfunctions", CfunctionsMethods);
 }
+
+// something like this should work in Python 3,
+// but MR is not familiar enough with C extensions to get the syntax right
+
+//static struct PyMethodDef Cfunctions = 
+//{
+//    PyMethodDef_HEAD_INIT,
+//    "Cfunctions",
+//    "",
+//    -1,
+//    CfunctionsMethods
+//};
+//
+//PyMODINIT_FUNC PyInit_Cfunctions(void)
+//{
+//    return PyModule_Create(&Cfunctions);
+//}

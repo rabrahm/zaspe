@@ -4,8 +4,20 @@ import shutil
 import subprocess
 import glob
 
+# most python users have these; a clear ImportError will be thrown if not
+# the original CheckLibraries() function used a 'p_name' variable which was not defined
+import numpy
+import scipy
+try:
+    import pyfits
+except:
+    from astropy.io import fits as pyfits
+
 def getDirs(foldername):
-    return os.walk(foldername).next()[1]
+    try:
+        return os.walk(foldername).next()[1] # python 2 version
+    except:
+        return os.walk(foldername).__next__()[1] # python 3 version
 
 def spaced(input,space):
     fixed = False
@@ -20,46 +32,14 @@ def spaced(input,space):
           fixed = True
     return input
 
-def CheckLibraries():
-    print "     ----------------------------------------------------------"
-    try:
-      import numpy
-    except ImportError:
-      print "     ----------------------------------------------------------"
-      print '     ERROR: '+p_name+' will not be installed in your system because' 
-      print '             numpy is not installed in your system.'
-      print '             To install it, go to: http://www.numpy.org/\n\n'
-      sys.exit(1)
-    print "     > Numpy is ok!"
-    try:
-      import scipy
-    except ImportError:
-      print "     ----------------------------------------------------------"
-      print '     ERROR: '+p_name+' will not be installed in your system because'
-      print '             scipy is not installed in your system.'
-      print '             To install it, go to: http://www.scipy.org/\n\n'
-      sys.exit(1)
-    print "     > Scipy is ok!"
-    try:
-      import pyfits
-    except ImportError:
-      print "     ----------------------------------------------------------"
-      print '     ERROR: '+p_name+' will not be installed in your system because'
-      print '            pyfits is not installed in your system.'
-      print '            To install it, go to: http://www.stsci.edu/institute/software_hardware/pyfits \n\n'
-      sys.exit(1)
-    print "     > Pyfits is ok!"
-
-CheckLibraries()
-
 p = subprocess.Popen('python setup.py build',stdout = subprocess.PIPE, stderr = subprocess.PIPE,shell = True)
 p.wait()
 if(p.returncode != 0 and p.returncode != None):
-	print "     ----------------------------------------------------------"
-	print "     > ERROR: integration.c couldn't be installed."
-	print "     > The error was:\n"
+	print("     ----------------------------------------------------------")
+	print("     > ERROR: integration.c couldn't be installed.")
+	print("     > The error was:\n")
 	out, err = p.communicate()
-	print spaced(err,"\t \t")
+	print((spaced(err,"\t \t")))
 	sys.exit()
 libfolder = getDirs('build/.')
 for name in libfolder:
@@ -67,16 +47,16 @@ for name in libfolder:
         filename = glob.glob('build/'+name+'/*')
         shutil.copy2(filename[0],'.')
 shutil.rmtree('build')
-print '     >...done!'
+print('     >...done!')
 
 p = subprocess.Popen('python setup2.py build',stdout = subprocess.PIPE, stderr = subprocess.PIPE,shell = True)
 p.wait()
 if(p.returncode != 0 and p.returncode != None):
-	print "     ----------------------------------------------------------"
-	print "     > ERROR: Cfunctions.c couldn't be installed."
-	print "     > The error was:\n"
+	print("     ----------------------------------------------------------")
+	print("     > ERROR: Cfunctions.c couldn't be installed.")
+	print("     > The error was:\n")
 	out, err = p.communicate()
-	print spaced(err,"\t \t")
+	print((spaced(err,"\t \t")))
 	sys.exit()
 libfolder = getDirs('build/.')
 for name in libfolder:
@@ -84,4 +64,4 @@ for name in libfolder:
         filename = glob.glob('build/'+name+'/*')
         shutil.copy2(filename[0],'.')
 shutil.rmtree('build')
-print '     >...done!'
+print('     >...done!')

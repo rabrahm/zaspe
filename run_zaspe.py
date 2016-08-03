@@ -1,14 +1,18 @@
 import new2
 import new3
 import numpy as np
-import pyfits
+try:
+    import pyfits
+except:
+    from astropy.io import fits as pyfits
 import time
 import os
 
 f = open('zaspe.pars','r')
 lines = f.readlines()
 
-outdir = '/home/rbrahm/zaspe_results/'
+#outdir = '/home/rbrahm/zaspe_results/'
+outdir = '/Users/Meredith/Astronomy/zaspe_test/'
 
 for line in lines:
 	cos = line.split()
@@ -85,17 +89,17 @@ elif library == 'P':
 elif library == 'C':
 	mod_n = 'Coelho et al. (2005)'
 
-print '\n\t ZASPE'
+print('\n\t ZASPE')
 
-print '\tinput spectrum:', ttemp
-print '\twill use the', mod_n, 'library of synthetic spectra.\n'
+print(('\tinput spectrum:', ttemp))
+print(('\twill use the', mod_n, 'library of synthetic spectra.\n'))
 
 if 'P' in mod:
-	print '\tPerforming the search of the optimal parameters ...'
+	print('\tPerforming the search of the optimal parameters ...')
 	pars = new3.get_rough_pars(spec,RESI=RESI,ncores=ncores,\
                               trunc=trunc,printing=True,use_masks=True,fixG=fixG,nit=nit,elim=0.1)
-	print '\tZAPE parameters:'
-	print '\tTeff=', pars[0], 'log(g)=', pars[1], '[Fe/H]=',pars[2], 'vsin(i)=', pars[3], 'RV=', pars[4]
+	print('\tZAPE parameters:')
+	print(('\tTeff=', pars[0], 'log(g)=', pars[1], '[Fe/H]=',pars[2], 'vsin(i)=', pars[3], 'RV=', pars[4]))
 	if not 'E' in mod:
 		date = str(time.localtime()).split('=')
 		odat = '_'+date[1].split(',')[0]+'_'+date[2].split(',')[0]+'_'+date[3].split(',')[0]+\
@@ -117,9 +121,9 @@ else:
 		raise ValueError('You have not requested the computation of the stellar parameters and you have not provided them')
 
 if 'E' in mod:
-	print '\tPerforming the Monte Carlo simulation to obtain the covariance in the parameters ...'
+	print('\tPerforming the Monte Carlo simulation to obtain the covariance in the parameters ...')
 	mc  = new2.get_precise_parameters(spec,pars,RESI=RESI,ncores=ncores,trunc=trunc,fixG=fixG,nsim=nsim,efixG=efixG)
-	print '\tSimulation done.'
+	print('\tSimulation done.')
 
 	et = np.around(np.sqrt(np.var(mc[:,0])))
 	eg = np.around(np.sqrt(np.var(mc[:,1])),3)
@@ -127,12 +131,12 @@ if 'E' in mod:
 	er = np.around(np.sqrt(np.var(mc[:,3])),3)
 	ev = np.around(np.sqrt(np.var(mc[:,4])),3)
 	
-	print '\tZAPE parameters:'
-	print '\tTeff=',pars[0], '+/-', et
-	print '\tlog(g)=',pars[1], '+/-', eg
-	print '\t[Fe/H]=',pars[2], '+/-', ez
-	print '\tvsin(i)=',pars[3], '+/-', er
-	print '\tRV=', pars[4], '+/-', ev
+	print('\tZAPE parameters:')
+	print(('\tTeff=',pars[0], '+/-', et))
+	print(('\tlog(g)=',pars[1], '+/-', eg))
+	print(('\t[Fe/H]=',pars[2], '+/-', ez))
+	print(('\tvsin(i)=',pars[3], '+/-', er))
+	print(('\tRV=', pars[4], '+/-', ev))
 
 	out = np.vstack((pars,mc))
 	hdu = pyfits.PrimaryHDU(out)

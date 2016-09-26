@@ -3,10 +3,7 @@ import sys
 #sys.path.append('/data/echelle/AUTOMOOGPUC/rot_conv/')
 import integration
 import rot_conv
-try:
-    import pyfits
-except:
-    from astropy.io import fits as pyfits
+import pyfits
 #import matplotlib.pyplot as plt
 import numpy as np
 import scipy
@@ -21,10 +18,6 @@ import os
 from pylab import *
 from matplotlib.backends.backend_pdf import PdfPages
 #from pyevolve import *
-
-"""
-Version of the code created to increase the speed of coputation by determining the continuum normalization after each iteration.
-"""
 
 def n_Edlen(l):
     sigma = 1e4 / l
@@ -53,7 +46,6 @@ def ToVacuum(l):
 
 f = open('zaspe.pars','r')
 lines = f.readlines()
-mask_dir = 'G2.mas'
 for line in lines:
 	cos = line.split()
 	if len(cos)==2:
@@ -71,8 +63,6 @@ for line in lines:
 			modC = cos[1]
 		elif cos[0] == 'modR':
 			modR = cos[1]
-		elif cos[0] == 'maskDir':
-			mask_dir = cos[1]
 #library = 'C'
 #library = 'P'
 #library = 'R'
@@ -109,13 +99,13 @@ elif library == 'R':
 	mhd = pyfits.getheader(mod_dir+'4000_50_p000.fits')
 	mw = ToVacuum(np.arange(mhd['NAXIS1'])*float(mhd['CD1_1']) + float(mhd['CRVAL1']))
 	ti,tf,dt = 4000,7000,200
-	gi,gf,dg = 2.0,5.0,0.5
+	gi,gf,dg = 1.0,5.0,0.5
 	zi,zf,dz = -1.0,0.5,0.25
 	ts = np.arange(ti,tf+1,dt)
 	gs = np.arange(gi,gf+.1,dg)
 	zs = np.arange(-1.0,0.6,0.25)
 
-Iwav = np.where((mw>wi)&(mw<wf))[0]
+Iwav = np.where((mw>wi-100)&(mw<wf+100))[0]
 mw = mw[Iwav]
 
 def get_vmac(T):
@@ -130,12 +120,7 @@ def get_vmac(T):
 		vmac = 1.5
 	return vmac
 
-def get_ccf(wavs,fluxs,ords,vels,ml_v,mh_v,weight):
-	for o in ords:
-		mflux = scipy.signal.medfilt(fluxs[o],11)
-		coef = get_cont(wavs[o],mflux,n=3)
-		fluxs[o] = fluxs[o]/np.polyval(coef,wavs[o])
-
+def get_ccf(wavs,fluxs,vels,ml_v,mh_v,weight):
 	#for i in range(len(fluxs)):
 	#	nflx = scipy.signal.medfilt(fluxs[i],11)
 	#	fluxs[i] /= np.max(nflx)
@@ -143,7 +128,7 @@ def get_ccf(wavs,fluxs,ords,vels,ml_v,mh_v,weight):
 	for v in vels:
 		ml = ml_v*(1+v/lux)
 		mh = mh_v*(1+v/lux)
-		for i in ords:
+		for i in range(wavs.shape[0]):
 			I = np.where((ml > wavs[i,10])&(mh<wavs[i,-10]))[0]
 			if len(I) > 5:
 				mli = ml[I]
@@ -162,27 +147,21 @@ def get_ccf(wavs,fluxs,ords,vels,ml_v,mh_v,weight):
 					msk[int(pl[zi])] = fl1[zi]*wts[zi]
 					msk[l1[zi]:h1[zi]] = wts[zi]
 					msk[h1[zi]] = fh1[zi]*wts[zi]
-				if i == ords[0]:
+				if i == 0:
 					tmask = msk
 				else:
 					tmask = np.vstack((tmask,msk))
-
 			else:
 				msk = np.zeros(len(wavs[i]))
-				if i == ords[0]:
+				if i == 0:
 					tmask = msk
 				else:
 					tmask = np.vstack((tmask,msk))
-			I1 = np.where(np.isnan(msk))
-			I2 = np.where(np.isnan(fluxs[i]))
-
-
 		tmask = tmask/np.sum(tmask)
-		nflxs = fluxs[ords]/np.sum(fluxs[ords])
+		nflxs = fluxs/np.sum(fluxs)
 		ccf.append(np.sum(tmask*nflxs))
 	#plot(vels,ccf)
 	#show()
-	#print gfds
 	return np.array(ccf)
 
 def get_oriname(t,g,z):
@@ -260,7 +239,7 @@ def get_interpolated(t,g,z):
 				if library == 'P':
 					data[it,ig,iz] = pyfits.getdata(get_oriname(dts[it],dgs[ig],dzs[iz]))[Iwav]
 					mmhd = pyfits.getheader(get_oriname(dts[it],dgs[ig],dzs[iz]))
-					if 'PHXXI_L' in list(mmhd.keys()):
+					if 'PHXXI_L' in mmhd.keys():
 						data2[it,ig,iz] = mmhd['PHXXI_L']
 					else:
 						data2[it,ig,iz] = 2.0
@@ -297,7 +276,7 @@ def get_model(t,g,z):
 		if library == 'P':
 			mf = pyfits.getdata(get_oriname(t,g,z))[Iwav]
 			mhd = pyfits.getheader(get_oriname(t,g,z))
-			if 'PHXXI_L' in list(mhd.keys()):
+			if 'PHXXI_L' in mhd.keys():
 				mict = float(mhd['PHXXI_L'])
 			else:
 				mict = 2.0
@@ -327,7 +306,6 @@ def get_model(t,g,z):
 
 
 def pixelization(x,y,rwav,nref=50):
-
 	tck = interpolate.splrep(np.arange(len(rwav))+0.5,rwav,k=3)
 	X = np.arange(nref*len(rwav))/float(nref)
 	Y = interpolate.splev(X,tck)
@@ -342,7 +320,7 @@ def pixelization(x,y,rwav,nref=50):
 
 def get_mict(t,g,z):
 	mmhd = pyfits.getheader(get_oriname(t,g,z))
-	if 'PHXXI_L' in list(mmhd.keys()):
+	if 'PHXXI_L' in mmhd.keys():
 		return mmhd['PHXXI_L']
 	else:
 		return 2.0
@@ -427,64 +405,17 @@ def get_ratio(sciw,rat,n=3):
 
 	return coef
 
-def get_conti(t,g,z,rot):
-    out0,out1,out2,out3,out4,out5,out6 = np.array([]),np.array([]),np.array([]),np.array([]),np.array([]),np.array([]),np.array([])
-    mf = get_full_model(t,g,z,rot,RES_POW)
-    mwav,mflx,wav,flx = mw.copy(),mf.copy(),sc[0].copy(),sc[3].copy()
-    ret_cont = np.ones(sc[0].shape)
-    for i in ords:
-        I = np.where((mwav>wav[i,0]) & (mwav<wav[i,-1]))[0]
-        modw = mwav[I]
-        modf = mflx[I]
-        sciw = wav[i]
-        scif = flx[i]/np.median(flx[i])
-        modf = pixelization(modw,modf,sciw)
-
-        if len(zmask)>0:
-            II = np.where(zmask[i]!=0)[0]
-            modf /= np.mean(modf[II])
-        else:
-            modf /= modf.mean()
-        mscif = scipy.signal.medfilt(scif,11)
-	mscifO = mscif.copy()
-        INF = np.where(mscif!=0)[0]
-        I0 = np.where(mscif==0)[0]
-        mscif[I0] = 1.
-        rat = modf/mscif
-        rat[I0] = 0.
-        #IB = np.where(bmask[i]!=0)[0]
-        coef = get_ratio(sciw[INF],rat[INF])
-        ret_cont[i] = np.polyval(coef,sciw)
-	mscif = mscif * np.polyval(coef,sciw)
-	coef2 = get_cont(sciw,mscif)
-	ret_cont[i] = ret_cont[i] / np.polyval(coef2,sciw)
-
-	#coef3 = get_cont(sciw,mscifO)
-	#temp_cont = np.polyval(coef3,sciw)
-	#out0 = np.hstack((out0,np.zeros(len(sciw))+i))
-	#out1 = np.hstack((out1,sciw))
-	#out2 = np.hstack((out2,scif))
-	#out3 = np.hstack((out3,ret_cont[i]))
-	#out4 = np.hstack((out4,temp_cont))
-	#out5 = np.hstack((out5,rat))
-	#out6 = np.hstack((out6, np.polyval(coef,sciw)))
-    #out = np.vstack((out0,out1,out2,out3,out4,out5,out6))
-    #np.savetxt('/data/rabrahm/cont_example.txt',out.T)
-    #print gfds
-    return ret_cont
-
-def get_chis_comp(pars, save=False,plt=False,color='r'):
+def get_chis_comp(pars, save=False,plt=False):
 	t = pars[0]
 	g = pars[1]
 	z = pars[2]
 	rot = pars[3]
 	mf = get_full_model(t,g,z,rot,RES_POW)
-	#print t,g,z,rot,RES_POW
-	#print mf[25000]
 	mwav,mflx,wav,flx = mw.copy(),mf.copy(),sc[0].copy(),sc[3].copy()
 	res = np.array([])
 	Is = 0
 	largs = 0
+	tmpw,tmpf,tmpm,tmpo = np.array([]),np.array([]),np.array([]),np.array([])
 	for i in ords:
 		I = np.where((mwav>wav[i,0]) & (mwav<wav[i,-1]))[0]
 		modw = mwav[I]
@@ -508,22 +439,19 @@ def get_chis_comp(pars, save=False,plt=False,color='r'):
 		coef = get_ratio(sciw[INF],rat[INF])
 		scif = scif * np.polyval(coef,sciw)
 		mscif = mscif * np.polyval(coef,sciw)
-
 		coef = get_cont(sciw,mscif)
-		#coef = get_cont(sciw,scif)
 		scif = scif / np.polyval(coef,sciw)
 		coef = get_cont(sciw,modf)
 		modf = modf / np.polyval(coef,sciw)
 		
 		if plt:
 			#print len(tmpo)
-			plot(ToAir(sciw),scif,'k')
-			plot(ToAir(sciw),modf,color)
-			#tmpw = np.hstack((tmpw,sciw))
-			#tmpf = np.hstack((tmpf,scif))
-			#tmpm = np.hstack((tmpm,modf))
-			#tmpo = np.hstack((tmpo,np.zeros(len(modf))+i))
-		
+			plot(sciw,scif,'r')
+			plot(sciw,modf,'b')
+			tmpw = np.hstack((tmpw,sciw))
+			tmpf = np.hstack((tmpf,scif))
+			tmpm = np.hstack((tmpm,modf))
+			tmpo = np.hstack((tmpo,np.zeros(len(modf))+i))
 			
 		#	show()
 		#	print fds
@@ -548,104 +476,15 @@ def get_chis_comp(pars, save=False,plt=False,color='r'):
 			res = rest.copy()
 		else:
 			res = np.vstack((res,rest))
-		#print i, np.sqrt( np.sum(rest**2) / float(len(rest)) )
-	"""
 	if plt:
 		ftemp=open('temp_sp_ff.txt','w')
 		outtt = np.vstack((tmpw,tmpf,tmpm,tmpo)).T
 		np.savetxt('temp_sp_ff.txt',outtt)
 		show()
-	"""
-
-	#res, largs = compare(mw,mf,sc[0],sc[3],save=save)
-	chiss = np.sum(res**2) / float(largs)
-	#print pars,np.sum(res**2)
-	return chiss
-
-def get_chis_comp_2(pars, save=False,plt=False,color='r'):
-	t = pars[0]
-	g = pars[1]
-	z = pars[2]
-	rot = pars[3]
-	mf = get_full_model(t,g,z,rot,RES_POW)
-	#print t,g,z,rot,RES_POW
-	#print mf[25000]
-	mwav,mflx,wav,flx = mw.copy(),mf.copy(),sc[0].copy(),sc[3].copy()
-	res = np.array([])
-	Is = 0
-	largs = 0
-	for i in ords:
-		I = np.where((mwav>wav[i,0]) & (mwav<wav[i,-1]))[0]
-		modw = mwav[I]
-		modf = mflx[I]
-		sciw = wav[i]
-		scif = flx[i]/np.median(flx[i])
-		modf = pixelization(modw,modf,sciw)
-
-		if len(zmask)>0:
-			II = np.where(zmask[i]!=0)[0]
-			modf /= np.mean(modf[II])
-		else:
-			modf /= modf.mean()
-		mscif = scipy.signal.medfilt(scif,11)
-		INF = np.where(mscif!=0)[0]
-                I0 = np.where(mscif==0)[0]
-                mscif[I0] = 1.
-                #rat = modf/mscif
-                #rat[I0] = 0.
-		#IB = np.where(bmask[i]!=0)[0]
-		#coef = get_ratio(sciw[INF],rat[INF])
-		scif  = scif * conti[i]
-		mscif = mscif * conti[i]
-
-		#coef = get_cont(sciw,mscif)
-		#coef = get_cont(sciw,scif)
-		#scif = scif / np.polyval(coef,sciw)
-		coef = get_cont(sciw,modf)
-		modf = modf / np.polyval(coef,sciw)
-		
-		if plt:
-			#print len(tmpo)
-			plot(ToAir(sciw),scif,'k')
-			plot(ToAir(sciw),modf,color)
-			#tmpw = np.hstack((tmpw,sciw))
-			#tmpf = np.hstack((tmpf,scif))
-			#tmpm = np.hstack((tmpm,modf))
-			#tmpo = np.hstack((tmpo,np.zeros(len(modf))+i))
-		
-			
-		#	show()
-		#	print fds
-		#	#plot(sciw,modf)
-		rest = scif - modf
-		largI = len(scif)
-		if len(zmask)>0:
-			if sim_type == 'factors':
-				#plot(sciw,modf,'b')
-				modf = -(modf - 1.)*zmask[i]
-				modf = -modf + 1.
-				#plot(sciw,modf,'r')
-				rest = scif - modf
-			else:
-				rest = scif - modf*zmask[i]
-			II = np.where(zmask[i]==0)[0]
-			rest[II] = 0.
-			largI -= len(II) 
-		largs += largI
-
-		if len(res) == 0:
-			res = rest.copy()
-		else:
-			res = np.vstack((res,rest))
-		#print i, np.sqrt( np.sum(rest**2) / float(len(rest)) )
-	"""
-	if plt:
-		ftemp=open('temp_sp_ff.txt','w')
-		outtt = np.vstack((tmpw,tmpf,tmpm,tmpo)).T
-		np.savetxt('temp_sp_ff.txt',outtt)
-		show()
-	"""
-
+		print vgbhnj
+	#if plt:
+	#	show()
+	#	print gfds
 	#res, largs = compare(mw,mf,sc[0],sc[3],save=save)
 	chiss = np.sum(res**2) / float(largs)
 	#print pars,np.sum(res**2)
@@ -670,7 +509,7 @@ def get_fwhm(VELS,CCF,dplot=False):
 	if dplot:
 		plot(VELS,CCF)
 		show()
-		print(fds)
+		print fds
 	v1,c1,v2,c2 = VELS[:im],CCF[:im],VELS[im:],CCF[im:]
 	try:
 		I1 = np.where(c1 < 0.5)[0][-1]
@@ -768,7 +607,28 @@ def get_vsini(pars,dplot=False):
 	vels = np.arange(-7*ur,7*ur,1.0)
 	ccft = np.array([])
 
-	flx = flx*conti
+	coefs = []
+	for i in ords:
+		sciw = wav[i]
+		scif = flx[i]
+		I = np.where((mw>sciw[0])&(mw<sciw[-1]))[0]
+		I = np.hstack((I[0]-1,I,I[-1]+1))
+		#tck = interpolate.splrep(mw[I],mf[I],k=3)
+		modf = pixelization(mw[I],mf[I],sciw)
+		if sim_type == 'factors':
+			modf = -(modf -1) * zmask2[i]
+			modf = -modf + 1.
+		else:
+			modf = modf * zmask2[i]
+		mscif = scipy.signal.medfilt(scif,11)
+		I0 = np.where(mscif==0)[0]
+                mscif[I0] = 1.
+                rat = modf/mscif
+                rat[I0] = 0.
+		INF = np.where(mscif!=0)[0]
+		coef = get_ratio(sciw[INF],rat[INF])
+		coefs.append(coef)
+
 	for v in vels:
 		twav = mw*(1 + v/lux)
 		ccf = np.zeros((2,len(ords),wav.shape[1]))
@@ -782,7 +642,7 @@ def get_vsini(pars,dplot=False):
 				I = np.hstack((I[0]-1,I))
 			#I = np.hstack((I[0]-1,I,I[-1]+1))
 			modf = pixelization(twav[I],mf[I],sciw)
-			#scif = scif * np.polyval(coefs[i-ords.min()],sciw)
+			scif = scif * np.polyval(coefs[i-ords.min()],sciw)
 			if sim_type == 'factors':
 				modf = -(modf-1)*zmask2[i]
 				modf = -modf + 1.
@@ -795,8 +655,6 @@ def get_vsini(pars,dplot=False):
 			ccf[1,i-ords.min()] = modf / np.sum(modf*rot_mask[i])
 		ccft = np.hstack((ccft,np.sum(ccf[0]*ccf[1]*rot_mask[ords[0]:ords[-1]+1])))
 	#plot(vels,ccft)
-	#xlabel('velocity [km/s]',fontsize=18)
-	#ylabel('CCF', fontsize=18)
 	#show()
 	#print gvfcd
 
@@ -816,14 +674,7 @@ def get_vsini(pars,dplot=False):
 	tck = interpolate.splrep(fwhms,rots,k=3)
 
 	rout = interpolate.splev(obfwhm,tck)
-	#plot(fwhms,rots,'ro')
-	#nfwhms = np.arange(fwhms.min(),fwhms.max(),0.01)
-	#plot(nfwhms,interpolate.splev(nfwhms,tck),'k')
-	#plot([obfwhm],[rout],'bo')
-	#xlabel('FWHM [km/s]',fontsize=18)
-	#ylabel('vsin(i) [km/s]',fontsize=18)
-	#show()
-	#print fghjk
+
 	return rout,NRV
 
 def ccf_gau(params,vels):
@@ -833,19 +684,17 @@ def ccf_gau(params,vels):
 def res_ccf_gau(params,ccf,vels):
 	return ccf - ccf_gau(params,vels)
 
-def get_rough_pars(spec,RESI=120000.,RV0=0.,guess_vsini=1.0, ncores=6,mask=[],trunc=0,errors=False,use_masks=False,very_rough=False,printing=False,fixG=-1,elim=0.1,zmin=500,nit=15):
+def get_rough_pars(spec,RV0=0,guess_vsini=5.,RESI=120000.,ncores=6,mask=[],trunc=0,errors=False,use_masks=False,very_rough=False,printing=False,fixG=-1,elim=0.1,zmin=500,nit=15):
 
 	global namespec
 	namespec = spec
-	global sc,hd,RES_POW,npools,ords,zmask, zmask2, mask_bin, rot_mask, conti
-	
+	global sc,hd,RES_POW,npools,ords,zmask, zmask2, mask_bin, rot_mask
 
 	RES_POW = RESI
 	npools = ncores
 	sc = pyfits.getdata(spec)
 	sc = sc[:,:,trunc:sc.shape[2]-trunc]
 	hd = pyfits.getheader(spec)
-	conti = np.ones(sc[0].shape)
 	
 	"""
 	zmask2 = np.ones(sc[0].shape)
@@ -880,7 +729,7 @@ def get_rough_pars(spec,RESI=120000.,RV0=0.,guess_vsini=1.0, ncores=6,mask=[],tr
 			mask_bin[i][III] = 1.
 
 	#clean data
-
+	
 	for i in range(sc.shape[1]):
 		rms = np.sqrt(np.var(sc[3,i]))
 		res = sc[3,i] - sc[3,i].mean()
@@ -898,20 +747,18 @@ def get_rough_pars(spec,RESI=120000.,RV0=0.,guess_vsini=1.0, ncores=6,mask=[],tr
 			if len(I) == 0:
 				cond = False
 
-	# determine which echelle orders are going to be used
-	ords = []
-	for i in range(sc.shape[1]):
-		J1 = np.where(mw > sc[0,i,-1]*(1. + 100./lux))[0]
-		J2 = np.where(mw < sc[0,i,0]*(1. - 100./lux))[0]
-		if len(J1)>0 and len(J2)>0:
-			ords.append(i)
-
-	ords = np.array(ords)
-
+	"""
+	if 'RV' in hd.keys():
+		sc[0] *= (1. - float(hd['RV'])/lux)
+		RVTOT = float(hd['RV'])
+	else:
+		sc[0] *= (1. - RV0/lux)
+		RVTOT = RV0
+	"""
 	# First we guess RV and vsin(i) via CCF against a binary mask of G2V sptype
 	# Read in mask
 	rat_res = .5*120000./float(RES_POW)
-	ml, mh, weight = np.loadtxt(mask_dir,unpack=True)
+	ml, mh, weight = np.loadtxt('G2.mas',unpack=True)
 	ml_v = ToVacuum( ml )
 	mh_v = ToVacuum( mh )
 	# make mask larger accounting for factor ~2 lower res in CORALIE w/r to HARPS
@@ -919,14 +766,14 @@ def get_rough_pars(spec,RESI=120000.,RV0=0.,guess_vsini=1.0, ncores=6,mask=[],tr
 	ml_v -= (av_m - ml_v)*rat_res
 	mh_v += (mh_v - av_m)*rat_res
 	vels = np.arange(-200,200,1.)
-	ccf_m = get_ccf(sc[0],sc[3],ords,vels,ml_v,mh_v,weight)
+	ccf_m = get_ccf(sc[0],sc[3],vels,ml_v,mh_v,weight)
 	Im = np.argmin(ccf_m)
 	minvel = vels[Im]
 	guess = [ccf_m.max(),ccf_m.max()-ccf_m.min(),minvel,5.]
 	gauss_fit = optimize.leastsq(res_ccf_gau,guess,args=(ccf_m,vels))[0]
 
 	vels = np.arange(gauss_fit[2]-5*gauss_fit[3],gauss_fit[2]+5*gauss_fit[3],0.1)
-	ccf_m = get_ccf(sc[0],sc[3],ords,vels,ml_v,mh_v,weight)
+	ccf_m = get_ccf(sc[0],sc[3],vels,ml_v,mh_v,weight)
 	Im = np.argmin(ccf_m)
 	minvel = vels[Im]
 	guess = [ccf_m.max(),ccf_m.max()-ccf_m.min(),minvel,5.]
@@ -942,41 +789,44 @@ def get_rough_pars(spec,RESI=120000.,RV0=0.,guess_vsini=1.0, ncores=6,mask=[],tr
 		guess_vsini = sigma/0.66
 
 	if printing:
-		print('\t\tguessed RV:', np.around(RV0,3), 'km/s')
-		print('\t\tguessed vsin(i):', np.around(guess_vsini,2), 'km/s')
+		print '\t\tguessed RV:', np.around(RV0,3), 'km/s'
+		print '\t\tguessed vsin(i):', np.around(guess_vsini,2), 'km/s'
 	#guess_vsini = 2.0
 	curr = guess_vsini
 
-	#for o in ords:
-	#	plot(sc[0,o],sc[3,o])
-	#show()
+	# determine which echelle orders are going to be used
+	ords = []
+	for i in range(sc.shape[1]):
+		J1 = np.where(mw > sc[0,i,-1]*(1. + 100./lux))[0]
+		J2 = np.where(mw < sc[0,i,0]*(1. - 100./lux))[0]
+		if len(J1)>0 and len(J2)>0:
+			ords.append(i)
 
-	"""
-	t1,t2 = np.array([]),np.array([])
+	ords = np.array(ords)
 	#ords = np.array([6,7])
-	for i in ords:
-		t1 = np.hstack((t1,sc[0,i]))
-		t2 = np.hstack((t2,sc[3,i]))
-	t3 = np.vstack((t1,t2))
-	np.savetxt('data_temp_old.txt',t3)
-
-	xis = get_chis_comp([4600,4.6,0.0,1.0],plt=True)
-	print xis
-	print fdxs
-	"""
-	#get_chis_comp([6350,3.4,-0.34,10.75],plt=True,color='r')
+	#get_chis_comp([4000,4.00,0.3,2.0],plt=True)
 	#print gfdx
-	#get_chis_comp([6509,4.14,-0.02,10.6],plt=True,color='g')
+	#get_chis_comp([5750,3.50,-0.5,10.],plt=True)
 	#show()
 	#print gfd
-
+	"""
+	if guess_vsini == -1:
+		rots = np.arange(0.5,50.6,10.)
+		curr,NRV = get_vsini([5700,4.0,0.0,sc[0],sc[3],rots])
+		if curr < 0.5:
+			curr = 0.5
+	else:
+		curr = guess_vsini
+	"""
 	all_currs,all_curts,all_curgs,all_curzs = np.array([]),np.array([]),np.array([]),np.array([])
+	#curr = guess_vsini
 	ik = 0
 	while ik < nit:
 		if ik < 1  or very_rough:
 			
 			rts = np.arange(4000,7001,200)
 			rgs = np.arange(1.5, 4.6, 0.5)
+			rzs = np.arange(-1.0,0.6,0.5)
 			rzs = np.array([-1.0,-0.5,0.0,0.5])
 		else:
 			if ik < 2 or very_rough:
@@ -1024,15 +874,44 @@ def get_rough_pars(spec,RESI=120000.,RV0=0.,guess_vsini=1.0, ncores=6,mask=[],tr
 
 		models = np.vstack((nrts,nrgs,nrzs,np.zeros(len(nrts))+curr)).T
 
-		p = Pool(npools)
-		if ik == 0:
-			final_chis = np.array((p.map(get_chis_comp, models)))
+		"""
+		tckt = interpolate.splrep(rts,np.arange(len(rts)),k=1)
+		tckg = interpolate.splrep(rgs,np.arange(len(rgs)),k=1)
+		tckz = interpolate.splrep(rzs,np.arange(len(rzs)),k=1)
+		tckit = interpolate.splrep(np.arange(len(rts)),rts,k=1)
+		tckig = interpolate.splrep(np.arange(len(rgs)),rgs,k=1)
+		tckiz = interpolate.splrep(np.arange(len(rzs)),rzs,k=1)
+
+		if ik < 1:
+			fts = interpolate.splev(np.arange(rts[0],rts[-1]+1,100.),tckt)
+			fgs = interpolate.splev(np.arange(rgs[0],rgs[-1]+.001,.1),tckg)
+			fzs = interpolate.splev(np.arange(rzs[0],rzs[-1]+.001,.1),tckz)
 		else:
-			final_chis = np.array((p.map(get_chis_comp_2, models)))
+
+			fts = interpolate.splev(np.arange(rts[0],rts[-1]+1,1.),tckt)
+			fgs = interpolate.splev(np.arange(rgs[0],rgs[-1]+.001,.01),tckg)
+			fzs = interpolate.splev(np.arange(rzs[0],rzs[-1]+.001,.01),tckz)
+		nfts = np.repeat(fts, len(fgs)*len(fzs))
+		nfgs = np.repeat(fgs, len(fzs))
+		nfzs = np.tile(fzs,len(fgs))
+		nfgs = np.tile(nfgs,len(fts))
+		nfzs = np.tile(nfzs,len(fts))
+		coords = np.vstack((nfts,nfgs,nfzs))
+		"""
+
+		p = Pool(npools)
+		t0 = time.time()
+
+		final_chis = np.array((p.map(get_chis_comp, models)))
 		p.terminate()
 		III = np.argmin(final_chis)
 		final_chis_o = final_chis.copy()
-
+		"""
+		final_chis = final_chis.reshape((len(rts),len(rgs),len(rzs)))
+		zi = ndimage.map_coordinates(final_chis, coords,order=3, mode='nearest')
+		I = np.where(zi==zi.min())[0][0]
+		curt2,curg2,curz2 = interpolate.splev(nfts[I],tckit),interpolate.splev(nfgs[I],tckig),interpolate.splev(nfzs[I],tckiz)
+		"""
 
 		curt,curg,curz = models[III][0],models[III][1], models[III][2]
 		if ik>0:
@@ -1053,6 +932,9 @@ def get_rough_pars(spec,RESI=120000.,RV0=0.,guess_vsini=1.0, ncores=6,mask=[],tr
 			tckz2 = interpolate.splrep(nrzs[IZ],final_chis_o[IZ],k=3)
 			temZ = np.arange(lowz,upz,0.01)
 			curz3 = interpolate.splev(temZ,tckz2)
+			#plot(nrzs[IZ],final_chis_o[IZ],'ro')
+			#plot(temZ,curz3)
+			#show()
 			curz3 = temZ[np.argmin(curz3)]
 		if ik >= 4:
 			curt,curg,curz = curt3,curg3,curz3
@@ -1067,7 +949,8 @@ def get_rough_pars(spec,RESI=120000.,RV0=0.,guess_vsini=1.0, ncores=6,mask=[],tr
 		rots = rots[I]
 		past_curr = curr
 		dplot=False
-		conti = get_conti(curt,curg,curz,curr)
+		#if ik == 3:
+		#	dplot=True
 		curr,NRV = get_vsini([curt,curg,curz,sc[0],sc[3],rots],dplot=dplot)
 		if curr < 0.5:
 			curr = 0.5
@@ -1076,8 +959,9 @@ def get_rough_pars(spec,RESI=120000.,RV0=0.,guess_vsini=1.0, ncores=6,mask=[],tr
 		curr = np.around(curr,2)
 		RVTOT = np.around(RVTOT,3)
 		if printing:
-			print('\t\tIteration', ik, ':', curt,curg,curz,curr,RVTOT,final_chis.min())
-
+			print '\t\tIteration', ik, ':', curt,curg,curz,curr,RVTOT,final_chis.min()
+		#print fds
+		#KK = np.where(np.absolute(all_currs-curr)<0.05)[0]
 		dift,difg,difz,difr = np.absolute(all_curts - curt), np.absolute(all_curgs - curg), np.absolute(all_curzs - curz), np.absolute(all_currs - curr)
 		KK1 = np.where(dift<10)[0]
 		dift = np.zeros(len(dift))
@@ -1091,9 +975,12 @@ def get_rough_pars(spec,RESI=120000.,RV0=0.,guess_vsini=1.0, ncores=6,mask=[],tr
 		difz = np.zeros(len(difz))
 		if len(KK1)>0:
 			difz[KK1] = 1.
-
+		#KK1 = np.where(difr<0.05)[0]
+		#difr = np.zeros(len(difr))
+		#if len(KK1)>0:
+		#	difr[KK1] = 1.
 		KK = dift+difg+difz
-
+		#print KK
 		KK = np.where(KK==3.)[0]
 		if len(KK)>0 and ik > 3:
 			break
@@ -1105,11 +992,17 @@ def get_rough_pars(spec,RESI=120000.,RV0=0.,guess_vsini=1.0, ncores=6,mask=[],tr
 		if not errors and use_masks:
 			zi,zf = get_zones([curt,curg,curz,curr,RESI])
 			ZO,ZI,ZF = get_zetas(zi,zf)
-			#ZO,ZI,ZF,BZO,BZI,BZF = the_good_zones(ZO,ZI,ZF,[curt,curg,curz,curr,RVTOT],th=3.0,zmin=zmin,limit=elim)
-			ZO,ZI,ZF,BZO,BZI,BZF = the_good_zones_2(ZO,ZI,ZF,[curt,curg,curz,curr,RVTOT],th=3.0,zmin=zmin,limit=elim)
+			ZO,ZI,ZF,BZO,BZI,BZF = the_good_zones(ZO,ZI,ZF,[curt,curg,curz,curr,RVTOT],th=5.0,zmin=zmin,limit=elim)
 			zmask = np.zeros((sc.shape[1],sc.shape[2]))
 			for i in range(len(ZI)):
 				zmask[ZO[i],ZI[i]:ZF[i]] = 1.
+
+			#zri,zrf = get_rot_zones([curt,curg,curz,curr,RESI])
+			#ZRO,ZRI,ZRF = get_zetas(zri,zrf)
+			#ZRO,ZRI,ZRF,BZRO,BZRI,BZRF = the_good_zones(ZRO,ZRI,ZRF,[curt,curg,curz,curr,RVTOT],th=3.0,zmin=400,limit=elim)
+			#rot_mask = np.zeros((sc.shape[1],sc.shape[2]))
+			#for i in range(len(ZRI)):
+			#	rot_mask[ZRO[i],ZRI[i]:ZRF[i]] = 1.
 			
 			zmask2 = np.ones((sc.shape[1],sc.shape[2]))
 			mask_bin = zmask.copy()
@@ -1119,20 +1012,17 @@ def get_rough_pars(spec,RESI=120000.,RV0=0.,guess_vsini=1.0, ncores=6,mask=[],tr
 	#print curt,curg,curz
 	if use_masks:
 		if errors:
-			print('\t\t',curt,curg,curz,curr,RVTOT)
+			print '\t\t',curt,curg,curz,curr,RVTOT
 		else:
-			print('\t\t',curt,curg,curz,curr,RVTOT,len(ZO),len(BZO))
+			print '\t\t',curt,curg,curz,curr,RVTOT,len(ZO),len(BZO)
 	else:
-		print('\t\t',curt,curg,curz,curr,RVTOT)
+		print '\t\t',curt,curg,curz,curr,RVTOT
 
 	return np.array([curt,curg,curz,curr,RVTOT])
 
 def get_zones(pars):
-	lim6000, lim5000 = 0.05,0.12
-	#lim6000, lim5000 = 0.13,0.2
-	lim_c = np.polyfit([5000.,6000.],[lim5000,lim6000],1)
-	#lim = 0.05
-	#lim_c = np.array([ -5e-05,   4.0e-01])
+	lim = 0.05
+	lim_c = np.array([ -5e-05,   3.5e-01])
 	thrT,thrG,thrZ = 200,0.3,0.2
 	rot2 = max(3.0,pars[3])
 	R2 = pars[4]
@@ -1200,20 +1090,10 @@ def get_zones(pars):
 	diff = difT+difZ+difG
 
 	lim = np.polyval(lim_c,mw)
-	II = np.where(lim<lim6000)[0]
-	lim[II] = lim6000
-	II = np.where(lim>lim5000)[0]
-	lim[II] = lim5000
-
-	#ZJI = np.where((mw>5355)&(mw<5380))[0]
-	#for i in ZJI:
-	#    print mw[i],diff[i],lim[i]
-	#plot(mw[ZJI],diff[ZJI])
-	#plot(mw[ZJI],lim[ZJI],'r')
-	#show()
-	#print gfds
-	
-
+	II = np.where(lim<0.05)[0]
+	lim[II] = 0.05
+	II = np.where(lim>0.1)[0]
+	lim[II] = 0.1
 	I = np.where(diff>lim)[0]
 
 	I2 = np.hstack((I[-1],I[:-1]))
@@ -1270,15 +1150,6 @@ def get_zones(pars):
 	#print J.shape
 	#print len(miw)
 	#print gfcd
-
-	#plot(mw,diff)
-	#plot(mw,lim,linewidth=2.)
-	#xlabel(r'Wavelength [$\AA$]',fontsize=18)
-	#ylabel(r'$\Delta S_{\lambda} (\theta)$',fontsize=18)
-	#print len(miw)
-	#show()
-	#print gfds
-
 	return miw,mfw	
 
 def get_rot_zones(pars):
@@ -1419,7 +1290,6 @@ def get_rats(ZO,ZI,ZF,pars):
 		scif = scif * np.polyval(coef,sciw)
 		mscif = mscif * np.polyval(coef,sciw)
 		coef = get_cont(sciw,mscif)
-		#coef = get_cont(sciw,scif)
 		scif = scif / np.polyval(coef,sciw)
 		#plot(sciw,scif)
 		coef = get_cont(sciw,modf)
@@ -1478,7 +1348,6 @@ def get_factors(ZO,ZI,ZF,pars):
 		scif = scif * np.polyval(coef,sciw)
 		mscif = mscif * np.polyval(coef,sciw)
 		coef = get_cont(sciw,mscif)
-		#coef = get_cont(sciw,scif)
 		scif = scif / np.polyval(coef,sciw)
 		#plot(sciw,scif)
 		coef = get_cont(sciw,modf)
@@ -1543,7 +1412,6 @@ def the_good_zones(ZO,ZI,ZF,pars, th=5.0,zmin=400,limit=0.001):
 		scif = scif * np.polyval(coef,sciw)
 		mscif = mscif * np.polyval(coef,sciw)
 		coef = get_cont(sciw,mscif)
-		#coef = get_cont(sciw,scif)
 		scif = scif / np.polyval(coef,sciw)
 		coef = get_cont(sciw,modf)
 		modf = modf / np.polyval(coef,sciw)
@@ -1551,7 +1419,6 @@ def the_good_zones(ZO,ZI,ZF,pars, th=5.0,zmin=400,limit=0.001):
 		#plot(sciw,modf)
 		tmodf[i] = modf
 		tscif[i] = scif
-
 	
 	#show()
 	#print gfds
@@ -1592,10 +1459,9 @@ def the_good_zones(ZO,ZI,ZF,pars, th=5.0,zmin=400,limit=0.001):
 	resout = resout[IG]
 	difout = difout[IG]
 
-	hist(difout,30)
-	print(len(difout))
+	#hist(difout,30)
+	#print len(difout)
 	#show()
-	#print fgd
 
 	
 	meddif = np.median(difout)
@@ -1623,9 +1489,9 @@ def the_good_zones(ZO,ZI,ZF,pars, th=5.0,zmin=400,limit=0.001):
 		if len(I) == 0 and len(difout)<zmin:
 			cond = False
 	
-	print(len(difout))
-	hist(difout,30)
-	show()
+	#print len(difout)
+	#hist(difout,30)
+	#show()
 	#print gfds
 	"""
 	devr = np.mean(resout)
@@ -1660,123 +1526,6 @@ def the_good_zones(ZO,ZI,ZF,pars, th=5.0,zmin=400,limit=0.001):
 	"""
 	return ZO,ZI,ZF,BZO,BZI,BZF
 
-def the_good_zones_2(ZO,ZI,ZF,pars, th=3.0,zmin=400,limit=0.001):
-	BZO,BZI,BZF = np.array([]),np.array([]),np.array([])
-	ords = []
-	for i in range(sc.shape[1]):
-		J1 = np.where(mw > sc[0,i,-1])[0]
-		J2 = np.where(mw < sc[0,i,0])[0]
-		if len(J1)>0 and len(J2)>0:
-			ords.append(i)
-	ords = np.array(ords)
-	mf = get_full_model(pars[0],pars[1],pars[2],pars[3],RES_POW)
-	tmodf = np.zeros((sc.shape[1],sc.shape[2]))
-	tscif = np.zeros((sc.shape[1],sc.shape[2]))
-	#print ords
-	for i in ords:
-		I = np.where((mw>sc[0,i,0]) & (mw<sc[0,i,-1]))[0]
-		modw = mw[I]
-		modf = mf[I]
-		sciw = sc[0,i]
-		scif = sc[3,i]/np.median(sc[3,i])
-		modf = pixelization(modw,modf,sciw)
-		modf /= modf.mean()
-		mscif = scipy.signal.medfilt(scif,11)
-		rat = modf/mscif
-		INF = np.where(mscif!=0)[0]
-		#if i == 7:
-		#	plot(sciw,scif)
-		#	show()
-		coef = get_ratio(sciw[INF],rat[INF])
-		scif = scif * np.polyval(coef,sciw)
-		#if i == 7:
-		#	plot(sciw,scif)
-		#	show()
-		mscif = mscif * np.polyval(coef,sciw)
-		coef = get_cont(sciw,mscif)
-		scif = scif / np.polyval(coef,sciw)
-		coef = get_cont(sciw,modf)
-		modf = modf / np.polyval(coef,sciw)
-		#if i == 7:
-		#	plot(sciw,scif)
-		#	show()
-		#	print gfds
-		#plot(sciw,scif)
-		#plot(sciw,modf)
-		tmodf[i] = modf
-		tscif[i] = scif
-	#	ZIJ = np.where((sciw>5355) & (sciw<5380))[0]
-	#	if len(ZIJ)>0:
-	#		for ii in ZIJ:
-	#			print sciw[ii],scif[ii]
-	#print gfds
-	
-	#show()
-	#print gfds
-	res = tscif - tmodf
-	res = res**2
-	resout = np.array([])
-	deltzones = np.array([])
-	lenzones = np.array([])
-	factors = np.array([])
-	#print len(ZO)
-	for i in range(len(ZI)):
-		resout = np.hstack((resout,np.sum(res[ZO[i],ZI[i]:ZF[i]])/float(ZF[i]-ZI[i])))
-		deltzones = np.hstack((deltzones,tscif[ZO[i],ZI[i]:ZF[i]].max()-tscif[ZO[i],ZI[i]:ZF[i]].min()))
-		lenzones = np.hstack((lenzones,ZF[i]-ZI[i]+1))
-		ejs = tscif[ZO[i],ZI[i]:ZF[i]]
-		ejm = tmodf[ZO[i],ZI[i]:ZF[i]]
-		ejs = -(ejs - 1)
-		ejm = -(ejm - 1)
-		f = optimize.leastsq(res_f,[1.],args=(ejs,ejm))[0]
-		factors = np.append(factors,f)
-	#print len(ZO)
-	IB1 = np.where(deltzones<0.05)[0]
-	IB2 = np.where(deltzones>1.0)[0]
-	IB3 = np.where(factors>2)[0]
-	IB4 = np.where(factors<0.5)[0]
-	#IB3 = np.where(lenzones<5)[0]
-	IB = np.unique(np.hstack((IB1,IB2,IB3,IB4)))
-	IG = np.where((deltzones>=0.05)&(deltzones<=1.0)&(factors<=2)&(factors>=.5))[0]
-	BZO = np.hstack((BZO,ZO[IB]))
-	BZI = np.hstack((BZI,ZI[IB]))
-	BZF = np.hstack((BZF,ZF[IB]))
-	ZO  = ZO[IG]
-	ZI = ZI[IG]
-	ZF = ZF[IG]
-	resout = resout[IG]
-	#print len(ZO)
-
-	#hist(resout,30)
-	
-	devr = np.mean(resout)
-	I = np.where(resout > th*devr)[0]
-	cond = True
-	if len(I) == 0:
-		cond = False
-	#hist(resout,30)
-	
-	while cond:
-		im = np.argmax(resout)
-		resout = np.delete(resout,im)
-		BZO = np.hstack((BZO,ZO[im]))
-		BZI = np.hstack((BZI,ZI[im]))
-		BZF = np.hstack((BZF,ZF[im]))
-		ZO = np.delete(ZO,im)
-		ZI = np.delete(ZI,im)
-		ZF = np.delete(ZF,im)
-		devr = np.mean(resout)
-		I = np.where(resout > th*devr)[0]
-		if (len(I) == 0 and th*devr < limit):
-			cond = False
-		if len(I) == 0 and len(resout)<zmin:
-			cond = False
-	#print th*devr
-	#hist(resout,30)
-	#show()
-	#print gfds
-	#print len(ZO)
-	return ZO,ZI,ZF,BZO,BZI,BZF
 
 def get_zetas(zi,zf):
 	ZO,ZI,ZF = np.array([]),np.array([]),np.array([])
@@ -1828,16 +1577,7 @@ def get_precise_parameters(spec,rough_parameters,RESI=120000.,ncores=14,trunc=0,
 
 	zi,zf = get_zones([rt,rg,rz,rr,RESI])
 	ZO,ZI,ZF = get_zetas(zi,zf)
-	ZO,ZI,ZF,BZO,BZI,BZF = the_good_zones_2(ZO,ZI,ZF,rough_parameters,th=3.0,zmin=zmin,limit=elim)
-	#for i in range(len(ZO)):
-	#	if sc[0,ZO[i],ZI[i]] > 5355 and sc[0,ZO[i],ZI[i]] < 5380: 
-	#		print sc[0,ZO[i],ZI[i]],sc[0,ZO[i],ZF[i]]
-	#print gfd
-	#mf = get_full_model(rt,rg,rz,rr,60000.)
-	#I = np.where((mw>5355) & (mw<5380))[0]
-	#for i in I:
-	#	print mw[i],mf[i]
-	#print gfds
+	ZO,ZI,ZF,BZO,BZI,BZF = the_good_zones(ZO,ZI,ZF,rough_parameters,th=5.0,zmin=zmin,limit=elim)
 	#print len(ZO)
 	mask = np.zeros((sc.shape[1],sc.shape[2]))
 	mask_bin = np.ones((sc.shape[1],sc.shape[2]))
@@ -1851,8 +1591,6 @@ def get_precise_parameters(spec,rough_parameters,RESI=120000.,ncores=14,trunc=0,
 	#	plot(sc[0,i],sc[3,i]*mask_bin[i])
 	#show()
 	#print gfds
-
-	
 	#zri,zrf = get_rot_zones([rt,rg,rz,rr,RESI])
 	#ZRO,ZRI,ZRF = get_zetas(zri,zrf)
 	#ZRO,ZRI,ZRF,BZRO,BZRI,BZRF = the_good_zones(ZRO,ZRI,ZRF,rough_parameters,th=3.0,zmin=400,limit=0.005)
@@ -1919,7 +1657,7 @@ def get_precise_parameters(spec,rough_parameters,RESI=120000.,ncores=14,trunc=0,
 				if fixG != -1:
 					fixG2 = min(np.random.normal(loc=fixG,scale=efixG),5.0)
 				else:
-					print('\t\tProblem with fixG')
+					print '\t\tProblem with fixG'
 			else:
 				fixG2 = fixG
 			tpars = get_rough_pars(spec,RV0=0.,guess_vsini=rpars[3],RESI=RESI,ncores=ncores,mask=nmask,trunc=trunc,errors=True,use_masks=True,fixG=fixG2)
@@ -1929,7 +1667,7 @@ def get_precise_parameters(spec,rough_parameters,RESI=120000.,ncores=14,trunc=0,
 				TPARS = np.vstack((TPARS,tpars))
 			count +=1
 		except:
-			print('Oops ...')
+			print 'Oops ...'
 	"""
 	et = np.around(np.sqrt(np.var(TPARS[:,0])))
 	eg = np.around(np.sqrt(np.var(TPARS[:,1])),3)

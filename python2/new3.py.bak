@@ -3,10 +3,7 @@ import sys
 #sys.path.append('/data/echelle/AUTOMOOGPUC/rot_conv/')
 import integration
 import rot_conv
-try:
-    import pyfits
-except:
-    from astropy.io import fits as pyfits
+import pyfits
 #import matplotlib.pyplot as plt
 import numpy as np
 import scipy
@@ -260,7 +257,7 @@ def get_interpolated(t,g,z):
 				if library == 'P':
 					data[it,ig,iz] = pyfits.getdata(get_oriname(dts[it],dgs[ig],dzs[iz]))[Iwav]
 					mmhd = pyfits.getheader(get_oriname(dts[it],dgs[ig],dzs[iz]))
-					if 'PHXXI_L' in list(mmhd.keys()):
+					if 'PHXXI_L' in mmhd.keys():
 						data2[it,ig,iz] = mmhd['PHXXI_L']
 					else:
 						data2[it,ig,iz] = 2.0
@@ -297,7 +294,7 @@ def get_model(t,g,z):
 		if library == 'P':
 			mf = pyfits.getdata(get_oriname(t,g,z))[Iwav]
 			mhd = pyfits.getheader(get_oriname(t,g,z))
-			if 'PHXXI_L' in list(mhd.keys()):
+			if 'PHXXI_L' in mhd.keys():
 				mict = float(mhd['PHXXI_L'])
 			else:
 				mict = 2.0
@@ -342,7 +339,7 @@ def pixelization(x,y,rwav,nref=50):
 
 def get_mict(t,g,z):
 	mmhd = pyfits.getheader(get_oriname(t,g,z))
-	if 'PHXXI_L' in list(mmhd.keys()):
+	if 'PHXXI_L' in mmhd.keys():
 		return mmhd['PHXXI_L']
 	else:
 		return 2.0
@@ -670,7 +667,7 @@ def get_fwhm(VELS,CCF,dplot=False):
 	if dplot:
 		plot(VELS,CCF)
 		show()
-		print(fds)
+		print fds
 	v1,c1,v2,c2 = VELS[:im],CCF[:im],VELS[im:],CCF[im:]
 	try:
 		I1 = np.where(c1 < 0.5)[0][-1]
@@ -942,8 +939,8 @@ def get_rough_pars(spec,RESI=120000.,RV0=0.,guess_vsini=1.0, ncores=6,mask=[],tr
 		guess_vsini = sigma/0.66
 
 	if printing:
-		print('\t\tguessed RV:', np.around(RV0,3), 'km/s')
-		print('\t\tguessed vsin(i):', np.around(guess_vsini,2), 'km/s')
+		print '\t\tguessed RV:', np.around(RV0,3), 'km/s'
+		print '\t\tguessed vsin(i):', np.around(guess_vsini,2), 'km/s'
 	#guess_vsini = 2.0
 	curr = guess_vsini
 
@@ -1076,7 +1073,7 @@ def get_rough_pars(spec,RESI=120000.,RV0=0.,guess_vsini=1.0, ncores=6,mask=[],tr
 		curr = np.around(curr,2)
 		RVTOT = np.around(RVTOT,3)
 		if printing:
-			print('\t\tIteration', ik, ':', curt,curg,curz,curr,RVTOT,final_chis.min())
+			print '\t\tIteration', ik, ':', curt,curg,curz,curr,RVTOT,final_chis.min()
 
 		dift,difg,difz,difr = np.absolute(all_curts - curt), np.absolute(all_curgs - curg), np.absolute(all_curzs - curz), np.absolute(all_currs - curr)
 		KK1 = np.where(dift<10)[0]
@@ -1119,11 +1116,11 @@ def get_rough_pars(spec,RESI=120000.,RV0=0.,guess_vsini=1.0, ncores=6,mask=[],tr
 	#print curt,curg,curz
 	if use_masks:
 		if errors:
-			print('\t\t',curt,curg,curz,curr,RVTOT)
+			print '\t\t',curt,curg,curz,curr,RVTOT
 		else:
-			print('\t\t',curt,curg,curz,curr,RVTOT,len(ZO),len(BZO))
+			print '\t\t',curt,curg,curz,curr,RVTOT,len(ZO),len(BZO)
 	else:
-		print('\t\t',curt,curg,curz,curr,RVTOT)
+		print '\t\t',curt,curg,curz,curr,RVTOT
 
 	return np.array([curt,curg,curz,curr,RVTOT])
 
@@ -1593,7 +1590,7 @@ def the_good_zones(ZO,ZI,ZF,pars, th=5.0,zmin=400,limit=0.001):
 	difout = difout[IG]
 
 	hist(difout,30)
-	print(len(difout))
+	print len(difout)
 	#show()
 	#print fgd
 
@@ -1623,7 +1620,7 @@ def the_good_zones(ZO,ZI,ZF,pars, th=5.0,zmin=400,limit=0.001):
 		if len(I) == 0 and len(difout)<zmin:
 			cond = False
 	
-	print(len(difout))
+	print len(difout)
 	hist(difout,30)
 	show()
 	#print gfds
@@ -1919,7 +1916,7 @@ def get_precise_parameters(spec,rough_parameters,RESI=120000.,ncores=14,trunc=0,
 				if fixG != -1:
 					fixG2 = min(np.random.normal(loc=fixG,scale=efixG),5.0)
 				else:
-					print('\t\tProblem with fixG')
+					print '\t\tProblem with fixG'
 			else:
 				fixG2 = fixG
 			tpars = get_rough_pars(spec,RV0=0.,guess_vsini=rpars[3],RESI=RESI,ncores=ncores,mask=nmask,trunc=trunc,errors=True,use_masks=True,fixG=fixG2)
@@ -1929,7 +1926,7 @@ def get_precise_parameters(spec,rough_parameters,RESI=120000.,ncores=14,trunc=0,
 				TPARS = np.vstack((TPARS,tpars))
 			count +=1
 		except:
-			print('Oops ...')
+			print 'Oops ...'
 	"""
 	et = np.around(np.sqrt(np.var(TPARS[:,0])))
 	eg = np.around(np.sqrt(np.var(TPARS[:,1])),3)

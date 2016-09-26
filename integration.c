@@ -510,6 +510,8 @@ return MyResult;
 
 }
 
+// the following only works in Python 2
+
 static PyMethodDef integrationMethods[] = {
 {"InstConv", integration_InstConv, METH_VARARGS, "¿que hace esto?"},{"InstConvVarGau", integration_InstConvVarGau, METH_VARARGS, "¿que hace esto?"},{"NotParamInstConv", integration_NotParamInstConv, METH_VARARGS, "¿que hace esto?"},{"MacRot", integration_MacRot, METH_VARARGS, "¿que hace esto?"},
 {NULL, NULL, 0, NULL}
@@ -518,3 +520,20 @@ static PyMethodDef integrationMethods[] = {
 void initintegration(void){
 (void) Py_InitModule("integration", integrationMethods);
 }
+
+// something like this should work in Python 3,
+// but MR is not familiar enough with C extensions to get the syntax right
+
+//static struct PyMethodDef integration = 
+//{
+//    PyMethodDef_HEAD_INIT,
+//    "integration",
+//    "",
+//    -1,
+//    integrationMethods
+//};
+//
+//PyMODINIT_FUNC PyInit_integration(void)
+//{
+//    return PyModule_Create(&integration);
+//}

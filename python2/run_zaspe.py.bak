@@ -1,18 +1,14 @@
 import new2
 import new3
 import numpy as np
-try:
-    import pyfits
-except:
-    from astropy.io import fits as pyfits
+from astropy.io import fits as pyfits
 import time
 import os
 
 f = open('zaspe.pars','r')
 lines = f.readlines()
 
-#outdir = '/home/rbrahm/zaspe_results/'
-outdir = '/Users/Meredith/Astronomy/zaspe_test/'
+outdir = '/home/rbrahm/zaspe_results/'
 
 for line in lines:
 	cos = line.split()
@@ -91,15 +87,15 @@ elif library == 'C':
 
 print('\n\t ZASPE')
 
-print(('\tinput spectrum:', ttemp))
-print(('\twill use the', mod_n, 'library of synthetic spectra.\n'))
+print('\tinput spectrum:', ttemp)
+print('\twill use the', mod_n, 'library of synthetic spectra.\n')
 
 if 'P' in mod:
 	print('\tPerforming the search of the optimal parameters ...')
 	pars = new3.get_rough_pars(spec,RESI=RESI,ncores=ncores,\
                               trunc=trunc,printing=True,use_masks=True,fixG=fixG,nit=nit,elim=0.1)
 	print('\tZAPE parameters:')
-	print(('\tTeff=', pars[0], 'log(g)=', pars[1], '[Fe/H]=',pars[2], 'vsin(i)=', pars[3], 'RV=', pars[4]))
+	print('\tTeff=', pars[0], 'log(g)=', pars[1], '[Fe/H]=',pars[2], 'vsin(i)=', pars[3], 'RV=', pars[4])
 	if not 'E' in mod:
 		date = str(time.localtime()).split('=')
 		odat = '_'+date[1].split(',')[0]+'_'+date[2].split(',')[0]+'_'+date[3].split(',')[0]+\
@@ -132,11 +128,11 @@ if 'E' in mod:
 	ev = np.around(np.sqrt(np.var(mc[:,4])),3)
 	
 	print('\tZAPE parameters:')
-	print(('\tTeff=',pars[0], '+/-', et))
-	print(('\tlog(g)=',pars[1], '+/-', eg))
-	print(('\t[Fe/H]=',pars[2], '+/-', ez))
-	print(('\tvsin(i)=',pars[3], '+/-', er))
-	print(('\tRV=', pars[4], '+/-', ev))
+	print('\tTeff=',pars[0], '+/-', et)
+	print('\tlog(g)=',pars[1], '+/-', eg)
+	print('\t[Fe/H]=',pars[2], '+/-', ez)
+	print('\tvsin(i)=',pars[3], '+/-', er)
+	print('\tRV=', pars[4], '+/-', ev)
 
 	out = np.vstack((pars,mc))
 	hdu = pyfits.PrimaryHDU(out)

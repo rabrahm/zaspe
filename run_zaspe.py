@@ -118,7 +118,7 @@ else:
 
 if 'E' in mod:
 	print '\tPerforming the Monte Carlo simulation to obtain the covariance in the parameters ...'
-	mc  = new2.get_precise_parameters(spec,pars,RESI=RESI,ncores=ncores,trunc=trunc,fixG=fixG,nsim=nsim,efixG=efixG)
+	mc  = new3.get_precise_parameters(spec,pars,RESI=RESI,ncores=ncores,trunc=trunc,fixG=fixG,nsim=nsim,efixG=efixG)
 	print '\tSimulation done.'
 
 	et = np.around(np.sqrt(np.var(mc[:,0])))

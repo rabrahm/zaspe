@@ -18,4 +18,4 @@ V	-1
 wavP	/path/to/WAVE_PHOENIX-ACES-AGSS-COND-2011.fits
 modP	/path/to/PHOENIX_MODELS/
 modC	/path/to/COELHO05_MODELS/
-modR	/path/to/BRAHM16_MODELS/
+modR    /path/to/BRAHM16_MODELS/

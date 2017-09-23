@@ -830,7 +830,7 @@ def ccf_gau(params,vels):
 def res_ccf_gau(params,ccf,vels):
 	return ccf - ccf_gau(params,vels)
 
-def get_rough_pars(spec,RESI=120000.,RV0=0.,guess_vsini=1.0, ncores=6,mask=[],trunc=0,errors=False,use_masks=False,very_rough=False,printing=False,fixG=-1,elim=0.1,zmin=500,nit=15):
+def get_rough_pars(spec,RESI=120000.,RV0=0.,guess_vsini=1.0, ncores=6,mask=[],trunc=0,errors=False,use_masks=False,very_rough=False,printing=False,fixG=-1,elim=0.1,zmin=500,nit=15, avoid_plot=True,plot_path='temp',gcor=0.):
 
 	global namespec
 	namespec = spec
@@ -1010,7 +1010,7 @@ def get_rough_pars(spec,RESI=120000.,RV0=0.,guess_vsini=1.0, ncores=6,mask=[],tr
 			rgs = np.arange(lowg, upg, ddg)
 			rzs = np.arange(lowz,upz,ddz)
 		if fixG != -1:
-			rgs = np.array([fixG])
+			rgs = np.array([fixG]) + gcor
 
 		rrs = np.array([curr])
 		nrts = np.repeat(rts, len(rgs)*len(rzs))
@@ -1045,7 +1045,7 @@ def get_rough_pars(spec,RESI=120000.,RV0=0.,guess_vsini=1.0, ncores=6,mask=[],tr
 				curg3 = interpolate.splev(temG,tckg2)
 				curg3 = temG[np.argmin(curg3)]
 			else:
-				curg3 = fixG
+				curg3 = fixG + gcor
 			IZ = np.where((nrts==curt)&(nrgs==curg))[0]
 			tckz2 = interpolate.splrep(nrzs[IZ],final_chis_o[IZ],k=3)
 			temZ = np.arange(lowz,upz,0.01)
@@ -1073,7 +1073,7 @@ def get_rough_pars(spec,RESI=120000.,RV0=0.,guess_vsini=1.0, ncores=6,mask=[],tr
 		curr = np.around(curr,2)
 		RVTOT = np.around(RVTOT,3)
 		if printing:
-			print '\t\tIteration', ik, ':', curt,curg,curz,curr,RVTOT,final_chis.min()
+			print '\t\tIteration', ik, ':', curt,curg-gcor,curz,curr,RVTOT,final_chis.min()
 
 		dift,difg,difz,difr = np.absolute(all_curts - curt), np.absolute(all_curgs - curg), np.absolute(all_curzs - curz), np.absolute(all_currs - curr)
 		KK1 = np.where(dift<10)[0]
@@ -1114,15 +1114,52 @@ def get_rough_pars(spec,RESI=120000.,RV0=0.,guess_vsini=1.0, ncores=6,mask=[],tr
 			
 		ik+=1
 	#print curt,curg,curz
+
+
+
+	if not avoid_plot:
+		pp = PdfPages(plot_path+'.pdf')
+		mf = get_full_model(curt,curg,curz,curr,RES_POW)
+		mwav,mflx,wav,flx = mw.copy(),mf.copy(),sc[0].copy(),sc[3].copy()
+		for i in ords:
+			I = np.where((mwav>wav[i,0]) & (mwav<wav[i,-1]))[0]
+			modw = mwav[I]
+			modf = mflx[I]
+			sciw = wav[i]
+			scif = flx[i]/np.median(flx[i])
+			modf = pixelization(modw,modf,sciw)
+
+			if len(zmask)>0:
+				II = np.where(zmask[i]!=0)[0]
+				modf /= np.mean(modf[II])
+			else:
+				modf /= modf.mean()
+			mscif = scipy.signal.medfilt(scif,11)
+			INF = np.where(mscif!=0)[0]
+			I0 = np.where(mscif==0)[0]
+			mscif[I0] = 1.
+			scif  = scif * conti[i]
+			mscif = mscif * conti[i]
+			coef = get_cont(sciw,modf)
+			modf = modf / np.polyval(coef,sciw)
+			#print ToAir(sciw).min(), ToAir(sciw).max()
+			plot(ToAir(sciw),scif,'k')
+			plot(ToAir(sciw),modf,'r')
+			pp.savefig()
+			clf()
+
+		pp.close()
+		clf()
+
 	if use_masks:
 		if errors:
-			print '\t\t',curt,curg,curz,curr,RVTOT
+			print '\t\t',curt,curg-gcor,curz,curr,RVTOT
 		else:
-			print '\t\t',curt,curg,curz,curr,RVTOT,len(ZO),len(BZO)
+			print '\t\t',curt,curg-gcor,curz,curr,RVTOT,len(ZO),len(BZO)
 	else:
-		print '\t\t',curt,curg,curz,curr,RVTOT
+		print '\t\t',curt,curg-gcor,curz,curr,RVTOT
 
-	return np.array([curt,curg,curz,curr,RVTOT])
+	return np.array([curt,curg-gcor,curz,curr,RVTOT])
 
 def get_zones(pars):
 	lim6000, lim5000 = 0.05,0.12
@@ -1813,11 +1850,13 @@ def get_final_zetas(ZO,ZI,ZF):
 	return NZO,NZI,NZF
 	
 		
-def get_precise_parameters(spec,rough_parameters,RESI=120000.,ncores=14,trunc=0,fixG=-1,elim=0.1,zmin=500,nsim=50,efixG=-1):
+def get_precise_parameters(spec,rough_parameters,RESI=120000.,ncores=14,trunc=0,fixG=-1,elim=0.1,zmin=500,nsim=50,efixG=-1,gcor=0.):
 	global sc, ords, RES_POW, mask_bin, rot_mask
 	RES_POW = RESI
 	rt,rg,rz,rr,rv = rough_parameters[0],rough_parameters[1],rough_parameters[2],rough_parameters[3],rough_parameters[4]
-
+	rg += gcor
+	if rg > 5.0:
+		rg = 5.0
 	sc = pyfits.getdata(spec)
 	sc = sc[:,:,trunc:sc.shape[2]-trunc]
 	sc[0] *= (1. - rv/lux)
@@ -1919,7 +1958,7 @@ def get_precise_parameters(spec,rough_parameters,RESI=120000.,ncores=14,trunc=0,
 					print '\t\tProblem with fixG'
 			else:
 				fixG2 = fixG
-			tpars = get_rough_pars(spec,RV0=0.,guess_vsini=rpars[3],RESI=RESI,ncores=ncores,mask=nmask,trunc=trunc,errors=True,use_masks=True,fixG=fixG2)
+			tpars = get_rough_pars(spec,RV0=0.,guess_vsini=rpars[3],RESI=RESI,ncores=ncores,mask=nmask,trunc=trunc,errors=True,use_masks=True,fixG=fixG2,gcor=gcor)
 			if len(TPARS)==0:
 				TPARS = np.array(tpars)
 			else:
@@ -1967,4 +2006,5 @@ def get_precise_parameters(spec,rough_parameters,RESI=120000.,ncores=14,trunc=0,
 	hdu.writeto(rout)
 	"""
 	return TPARS
+
 

@@ -5,6 +5,8 @@ import pyfits
 import time
 import os
 
+avoid_plot = True 
+
 f = open('zaspe.pars','r')
 lines = f.readlines()
 
@@ -49,6 +51,8 @@ for line in lines:
 			wf = float(cos[1])
 		elif cos[0] == 'outdir':
 			outdir = cos[1]
+
+
 isfits = True
 try:
 	sc = pyfits.getdata(spec)
@@ -77,9 +81,10 @@ except:
 	hdu.writeto(rtemp)
 	ttemp = spec
 	spec = rtemp
-	
+gcor = 0.
 if library == 'R':
 	mod_n = 'Brahm et al. (2016)'
+	gcor = 0.17
 elif library == 'P':
 	mod_n = 'Husser et al. (2013)'
 elif library == 'C':
@@ -92,8 +97,13 @@ print '\twill use the', mod_n, 'library of synthetic spectra.\n'
 
 if 'P' in mod:
 	print '\tPerforming the search of the optimal parameters ...'
+	date = str(time.localtime()).split('=')
+	odat = '_'+date[1].split(',')[0]+'_'+date[2].split(',')[0]+'_'+date[3].split(',')[0]+\
+			'_'+date[4].split(',')[0]+'_'+date[4].split(',')[0]+'_'+date[6].split(',')[0] + '_' 
+	rout = ttemp.split('/')[-1][:-5] + odat + 'zaspe_out'
+
 	pars = new3.get_rough_pars(spec,RESI=RESI,ncores=ncores,\
-                              trunc=trunc,printing=True,use_masks=True,fixG=fixG,nit=nit,elim=0.1)
+                              trunc=trunc,printing=True,use_masks=True,fixG=fixG,nit=nit,elim=0.1,plot_path=outdir+rout,avoid_plot=avoid_plot,gcor=gcor)
 	print '\tZAPE parameters:'
 	print '\tTeff=', pars[0], 'log(g)=', pars[1], '[Fe/H]=',pars[2], 'vsin(i)=', pars[3], 'RV=', pars[4]
 	if not 'E' in mod:
@@ -118,7 +128,7 @@ else:
 
 if 'E' in mod:
 	print '\tPerforming the Monte Carlo simulation to obtain the covariance in the parameters ...'
-	mc  = new3.get_precise_parameters(spec,pars,RESI=RESI,ncores=ncores,trunc=trunc,fixG=fixG,nsim=nsim,efixG=efixG)
+	mc  = new3.get_precise_parameters(spec,pars,RESI=RESI,ncores=ncores,trunc=trunc,fixG=fixG,nsim=nsim,efixG=efixG,gcor=gcor)
 	print '\tSimulation done.'
 
 	et = np.around(np.sqrt(np.var(mc[:,0])))

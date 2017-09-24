@@ -2,9 +2,9 @@ library	R
 wi	5000
 wf	6000
 mod	P
-spec	sun_spec.txt
-RESI	48000.
-ncores	16
+spec	/Users/rabrahm/Downloads/zaspe_hip115752.txt
+RESI	76000.
+ncores	3
 trunc	200
 nit	10
 nsim	50
@@ -18,4 +18,4 @@ V	-1
 wavP	/path/to/WAVE_PHOENIX-ACES-AGSS-COND-2011.fits
 modP	/path/to/PHOENIX_MODELS/
 modC	/path/to/COELHO05_MODELS/
-modR    /path/to/BRAHM16_MODELS/
+modR    /Users/rabrahm/Downloads/kurucz_mod_turb_inter_aste/

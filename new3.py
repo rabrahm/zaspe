@@ -3,7 +3,7 @@ import sys
 #sys.path.append('/data/echelle/AUTOMOOGPUC/rot_conv/')
 import integration
 import rot_conv
-import pyfits
+from astropy.io import fits as pyfits 
 #import matplotlib.pyplot as plt
 import numpy as np
 import scipy
@@ -1695,6 +1695,7 @@ def the_good_zones(ZO,ZI,ZF,pars, th=5.0,zmin=400,limit=0.001):
 	return ZO,ZI,ZF,BZO,BZI,BZF
 
 def the_good_zones_2(ZO,ZI,ZF,pars, th=3.0,zmin=400,limit=0.001):
+	ZO,ZI,ZF = ZO.astype('int'),ZI.astype('int'),ZF.astype('int')
 	BZO,BZI,BZF = np.array([]),np.array([]),np.array([])
 	ords = []
 	for i in range(sc.shape[1]):

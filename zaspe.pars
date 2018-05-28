@@ -2,10 +2,10 @@ library	R
 wi	5000
 wf	6000
 mod	P
-spec	sun_spec.txt
-RESI	48000.
-ncores	16
-trunc	200
+spec    /Users/rbrahm/data/zaspe_spectra/jlprieto/star_out.cor.txt	
+RESI	25000.
+ncores  7	
+trunc	50
 nit	10
 nsim	50
 fixG    -1
@@ -15,7 +15,8 @@ G	-1
 Z	-1
 R	-1
 V	-1
+outdir  /Users/rbrahm/data/zaspe_spectra/jlprieto/
 wavP	/path/to/WAVE_PHOENIX-ACES-AGSS-COND-2011.fits
 modP	/path/to/PHOENIX_MODELS/
 modC	/path/to/COELHO05_MODELS/
-modR    /path/to/BRAHM16_MODELS/
+modR    /Users/rbrahm/data/kurucz_mod_turb_NA/ 

@@ -41,14 +41,14 @@ def CheckLibraries():
       sys.exit(1)
     print "     > Scipy is ok!"
     try:
-      import pyfits
+      import astropy 
     except ImportError:
       print "     ----------------------------------------------------------"
       print '     ERROR: '+p_name+' will not be installed in your system because'
       print '            pyfits is not installed in your system.'
-      print '            To install it, go to: http://www.stsci.edu/institute/software_hardware/pyfits \n\n'
+      print '            To install it: pip install astropy \n\n'
       sys.exit(1)
-    print "     > Pyfits is ok!"
+    print "     > astropy is ok!"
 
 CheckLibraries()
 

@@ -3,7 +3,7 @@ import sys
 #sys.path.append('/data/echelle/AUTOMOOGPUC/rot_conv/')
 import integration
 import rot_conv
-import pyfits
+from astropy.io import fits as pyfits
 #import matplotlib.pyplot as plt
 import numpy as np
 import scipy

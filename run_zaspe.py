@@ -1,7 +1,7 @@
 import new2
 import new3
 import numpy as np
-import pyfits
+from astropy.io import fits as pyfits
 import time
 import os
 

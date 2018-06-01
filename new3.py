@@ -1491,7 +1491,7 @@ def res_f(p,s,m):
 	return s - p[0]*m
 
 def get_factors(ZO,ZI,ZF,pars):
-	ords = np.sort(np.unique(ZO))
+	ords = np.sort(np.unique(ZO)).astype('int')
 	mf = get_full_model(pars[0],pars[1],pars[2],pars[3],RES_POW)
 	tmodf = np.zeros((sc.shape[1],sc.shape[2]))
 	tscif = np.zeros((sc.shape[1],sc.shape[2]))
